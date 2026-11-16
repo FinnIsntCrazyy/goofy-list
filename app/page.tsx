@@ -5,6 +5,11 @@ import { supabase } from '../lib/supabase'
 
 const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'dhavvin_09', 'lopikpl']
 
+interface VictorEntry {
+  username: string
+  video_url?: string
+}
+
 interface GoofyLevel {
   id: number
   title: string
@@ -14,6 +19,8 @@ interface GoofyLevel {
   thumbnail?: string
   points?: number
   mode?: 'classic' | 'platformer'
+  gd_level_id?: string
+  victors?: VictorEntry[]
   submitted_by?: string
   status?: string
 }
@@ -50,6 +57,19 @@ interface Moderator {
   clan?: string
   country_code: string
   role: 'editor' | 'helper'
+}
+
+interface PlayerLeaderboardRow extends Profile {
+  totalPoints: number
+  completedCount: number
+  hardestLevel: GoofyLevel | null
+  entries: {
+    level: GoofyLevel
+    progress: number
+    pointsEarned: number
+    role: 'Verifier' | 'Victor' | 'Progress'
+    videoUrl?: string
+  }[]
 }
 
 function getYouTubeThumbnail(url?: string, fallbackSeed = 'gll'): string {
@@ -99,6 +119,7 @@ export default function Home() {
   const [lvlTitle, setLvlTitle] = useState('')
   const [lvlCreator, setLvlCreator] = useState('')
   const [lvlVerifier, setLvlVerifier] = useState('')
+  const [lvlGdId, setLvlGdId] = useState('')
   const [lvlVerifyVideo, setLvlVerifyVideo] = useState('')
   const [lvlPoints, setLvlPoints] = useState('250.00')
 
@@ -117,6 +138,14 @@ export default function Home() {
   const [modClan, setModClan] = useState('')
   const [modCountry, setModCountry] = useState('pl')
   const [modRole, setModRole] = useState<'editor' | 'helper'>('editor')
+
+  // Mod Edit Level Modal states
+  const [editingLevel, setEditingLevel] = useState<GoofyLevel | null>(null)
+  const [newVictorName, setNewVictorName] = useState('')
+  const [newVictorVideo, setNewVictorVideo] = useState('')
+
+  // Leaderboard Player Stats Modal state
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerLeaderboardRow | null>(null)
 
   // Roulette state
   const [rouletteLevel, setRouletteLevel] = useState<GoofyLevel | null>(null)
@@ -165,7 +194,7 @@ export default function Home() {
     setTimeout(() => setBannerMsg(''), 7000)
   }
 
-  // AUTH: REGISTER (Sends real confirmation email, then requires login)
+  // AUTH: REGISTER
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     const cleanUser = regUsername.trim().toLowerCase()
@@ -195,13 +224,9 @@ export default function Home() {
     }
 
     await supabase.auth.signOut()
-    setRegPasswordClear()
-    setActiveTab('login')
-    showNotice('Confirmation email sent to ' + regEmail + '! Please confirm your email in your inbox, then log in.')
-  }
-
-  function setRegPasswordClear() {
     setRegPass('')
+    setActiveTab('login')
+    showNotice('Account registered! Log in now with your email and password.')
   }
 
   // AUTH: LOGIN
@@ -235,7 +260,7 @@ export default function Home() {
     setActiveTab('classic')
   }
 
-  // SUBMIT RECORD (Classic or Platformer)
+  // SUBMIT RECORD
   async function handleRecordSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) {
@@ -275,7 +300,7 @@ export default function Home() {
     }
   }
 
-  // SUBMIT NEW LEVEL (Goes to Mod Panel for approval, thumbnail from YouTube verification video)
+  // SUBMIT NEW LEVEL
   async function handleLevelSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) {
@@ -291,10 +316,12 @@ export default function Home() {
         title: lvlTitle.trim(),
         creator: lvlCreator.trim(),
         verifier: lvlVerifier.trim() || currentUser.display_name,
+        gd_level_id: lvlGdId.trim(),
         verification_url: lvlVerifyVideo.trim(),
         thumbnail: autoThumb,
         points: parseFloat(lvlPoints) || 200,
         mode: lvlMode,
+        victors: [],
         submitted_by: currentUser.username,
         status: 'pending',
       },
@@ -306,6 +333,7 @@ export default function Home() {
       setLvlTitle('')
       setLvlCreator('')
       setLvlVerifier('')
+      setLvlGdId('')
       setLvlVerifyVideo('')
       setSidebarForm('none')
       refreshAll()
@@ -313,7 +341,69 @@ export default function Home() {
     }
   }
 
-  // UPDATE PROFILE (Password, Email, Country, Socials)
+  // MOD: DELETE LEVEL
+  async function handleDeleteLevel(levelId: number, title: string) {
+    if (!isMod) return
+    if (!confirm(`Are you sure you want to delete "${title}"?`)) return
+
+    const { error } = await supabase.from('demons').delete().eq('id', levelId)
+    if (error) {
+      alert('Error deleting level: ' + error.message)
+    } else {
+      refreshAll()
+      showNotice(`Deleted "${title}".`)
+    }
+  }
+
+  // MOD: SAVE EDITED LEVEL
+  async function handleSaveEditedLevel(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isMod || !editingLevel) return
+
+    const updatedThumb = getYouTubeThumbnail(editingLevel.verification_url, editingLevel.title)
+
+    const { error } = await supabase
+      .from('demons')
+      .update({
+        title: editingLevel.title.trim(),
+        creator: editingLevel.creator.trim(),
+        verifier: (editingLevel.verifier || '').trim(),
+        gd_level_id: (editingLevel.gd_level_id || '').trim(),
+        verification_url: (editingLevel.verification_url || '').trim(),
+        thumbnail: updatedThumb,
+        points: Number(editingLevel.points) || 0,
+        mode: editingLevel.mode || 'classic',
+        victors: editingLevel.victors || [],
+      })
+      .eq('id', editingLevel.id)
+
+    if (error) {
+      alert('Error updating level: ' + error.message)
+    } else {
+      setEditingLevel(null)
+      refreshAll()
+      showNotice('Level updated!')
+    }
+  }
+
+  function addVictorToEditingLevel() {
+    if (!editingLevel || !newVictorName.trim()) return
+    const nextVictors = [
+      ...(editingLevel.victors || []),
+      { username: newVictorName.trim(), video_url: newVictorVideo.trim() },
+    ]
+    setEditingLevel({ ...editingLevel, victors: nextVictors })
+    setNewVictorName('')
+    setNewVictorVideo('')
+  }
+
+  function removeVictorFromEditingLevel(index: number) {
+    if (!editingLevel) return
+    const nextVictors = (editingLevel.victors || []).filter((_, i) => i !== index)
+    setEditingLevel({ ...editingLevel, victors: nextVictors })
+  }
+
+  // UPDATE PROFILE
   async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) return
@@ -355,7 +445,7 @@ export default function Home() {
     }
   }
 
-  // MODERATOR: ISSUE WARNING TO USER
+  // MODERATOR: ISSUE WARNING
   async function handleIssueWarning(e: React.FormEvent) {
     e.preventDefault()
     if (!isMod || !warnTargetUser.trim() || !warnReason.trim()) return
@@ -374,22 +464,85 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  // LEADERBOARD CALCULATION
+  // LEADERBOARD CALCULATION (Approved Submissions + Manual Victors + Verifier Points)
   const approvedLevels = levels.filter((l) => (l.status || 'approved') === 'approved')
   const pendingLevels = levels.filter((l) => l.status === 'pending')
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
-  const leaderboard = profiles
+  const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
-      const userSubs = approvedSubs.filter((s) => s.player_username === prof.username)
-      const totalPoints = userSubs.reduce((sum, sub) => {
-        const lvl = approvedLevels.find((l) => l.id === sub.level_id)
-        const basePts = Number(lvl?.points || 0)
-        const earned = sub.progress === 100 ? basePts : basePts * (sub.progress / 100) * 0.25
-        return sum + earned
-      }, 0)
-      return { ...prof, totalPoints, completedCount: userSubs.length }
+      const uLower = prof.username.trim().toLowerCase()
+      const dLower = prof.display_name.trim().toLowerCase()
+      const seenLevelIds = new Set<number>()
+      const entries: PlayerLeaderboardRow['entries'] = []
+
+      // 1. Check Verifications on approved levels
+      approvedLevels.forEach((lvl) => {
+        const verLower = (lvl.verifier || '').trim().toLowerCase()
+        if (verLower && (verLower === uLower || verLower === dLower) && !seenLevelIds.has(lvl.id)) {
+          seenLevelIds.add(lvl.id)
+          entries.push({
+            level: lvl,
+            progress: 100,
+            pointsEarned: Number(lvl.points || 0),
+            role: 'Verifier',
+            videoUrl: lvl.verification_url,
+          })
+        }
+      })
+
+      // 2. Check Approved Record Submissions
+      approvedSubs
+        .filter((s) => s.player_username.trim().toLowerCase() === uLower)
+        .forEach((sub) => {
+          const lvl = approvedLevels.find((l) => l.id === sub.level_id)
+          if (!lvl || seenLevelIds.has(lvl.id)) return
+          seenLevelIds.add(lvl.id)
+          const basePts = Number(lvl.points || 0)
+          const earned = sub.progress === 100 ? basePts : basePts * (sub.progress / 100) * 0.25
+          entries.push({
+            level: lvl,
+            progress: sub.progress,
+            pointsEarned: earned,
+            role: sub.progress === 100 ? 'Victor' : 'Progress',
+            videoUrl: sub.video_url,
+          })
+        })
+
+      // 3. Check Manual Victors added via Edit Level modal
+      approvedLevels.forEach((lvl) => {
+        if (seenLevelIds.has(lvl.id)) return
+        const manualVictor = (lvl.victors || []).find((v) => {
+          const vLower = v.username.trim().toLowerCase()
+          return vLower === uLower || vLower === dLower
+        })
+        if (manualVictor) {
+          seenLevelIds.add(lvl.id)
+          entries.push({
+            level: lvl,
+            progress: 100,
+            pointsEarned: Number(lvl.points || 0),
+            role: 'Victor',
+            videoUrl: manualVictor.video_url,
+          })
+        }
+      })
+
+      const totalPoints = entries.reduce((sum, e) => sum + e.pointsEarned, 0)
+      const fullCompletions = entries.filter((e) => e.progress === 100)
+      const hardestLevel =
+        fullCompletions.length > 0
+          ? fullCompletions.sort((a, b) => Number(b.level.points || 0) - Number(a.level.points || 0))[0].level
+          : null
+
+      return {
+        ...prof,
+        totalPoints,
+        completedCount: fullCompletions.length,
+        hardestLevel,
+        entries: entries.sort((a, b) => Number(b.level.points || 0) - Number(a.level.points || 0)),
+      }
     })
     .sort((a, b) => b.totalPoints - a.totalPoints)
 
@@ -408,7 +561,9 @@ export default function Home() {
   const shownLevels = approvedLevels.filter(
     (l) =>
       (l.mode || 'classic') === (activeTab === 'platformer' ? 'platformer' : 'classic') &&
-      (l.title.toLowerCase().includes(search.toLowerCase()) || l.creator.toLowerCase().includes(search.toLowerCase()))
+      (l.title.toLowerCase().includes(search.toLowerCase()) ||
+        l.creator.toLowerCase().includes(search.toLowerCase()) ||
+        (l.gd_level_id || '').includes(search.trim()))
   )
 
   return (
@@ -462,7 +617,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* NAVIGATION TABS (Classic, Platformer, Leaderboard, Roulette, Profile, and Mod Panel ONLY for the 4 staff) */}
+        {/* NAVIGATION TABS */}
         <div className={darkMode ? 'bg-[#1b1c20] border-t border-gray-800' : 'bg-[#fafafa] border-t border-gray-200'}>
           <div className="max-w-6xl mx-auto flex flex-wrap justify-center text-sm font-semibold">
             <button
@@ -532,7 +687,6 @@ export default function Home() {
         {activeTab === 'login' && (
           <div className={`max-w-md mx-auto p-6 rounded border shadow space-y-4 ${cardClass}`}>
             <h2 className="text-2xl font-bold border-b pb-2">GLL Login</h2>
-            <p className="text-xs text-gray-500">Make sure you clicked the confirmation link in your email before logging in.</p>
             <form onSubmit={handleLogin} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Email</label>
@@ -583,22 +737,29 @@ export default function Home() {
                 <label className="block text-xs font-semibold mb-1">Password (min 6 chars)</label>
                 <input required minLength={6} type="password" value={regPass} onChange={(e) => setRegPass(e.target.value)} className={inputClass} />
               </div>
-              <button type="submit" className="w-full bg-[#007acc] text-white font-bold py-2 rounded">REGISTER & SEND EMAIL</button>
+              <button type="submit" className="w-full bg-[#007acc] text-white font-bold py-2 rounded">REGISTER</button>
             </form>
           </div>
         )}
 
-        {/* LEADERBOARD TAB */}
+        {/* LEADERBOARD TAB (CLICKABLE ACCOUNTS + VERIFIER POINTS) */}
         {activeTab === 'leaderboard' && (
           <div className={`max-w-3xl mx-auto p-6 rounded border shadow space-y-4 ${cardClass}`}>
             <h2 className="text-2xl font-bold border-b pb-2">Goofy Levels Leaderboard</h2>
-            <p className="text-xs text-gray-500">Players ranked by total points earned from approved Classic & Platformer completions.</p>
+            <p className="text-xs text-gray-500">
+              Click on any player account to view their stats, completions, and verifications.
+            </p>
             {leaderboard.length === 0 ? (
               <p className="text-sm text-gray-500 py-4">No registered players on the leaderboard yet.</p>
             ) : (
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {leaderboard.map((player, idx) => (
-                  <div key={player.id} className="py-3 flex items-center justify-between">
+                  <button
+                    key={player.id}
+                    type="button"
+                    onClick={() => setSelectedPlayer(player)}
+                    className="w-full text-left py-3 px-2 rounded hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="font-black text-base w-8 text-gray-400">#{idx + 1}</span>
                       <img
@@ -607,7 +768,7 @@ export default function Home() {
                         className="w-5 h-3.5 object-cover border border-gray-300"
                       />
                       <div>
-                        <p className="font-bold text-sm">{player.display_name}</p>
+                        <p className="font-bold text-sm hover:text-[#007acc] transition">{player.display_name}</p>
                         <div className="flex gap-3 text-[11px] text-gray-400">
                           {player.youtube && <span>YT: {player.youtube}</span>}
                           {player.discord && <span>Discord: {player.discord}</span>}
@@ -619,7 +780,7 @@ export default function Home() {
                       <p className="font-bold text-sm text-[#007acc]">{player.totalPoints.toFixed(2)} pts</p>
                       <p className="text-[11px] text-gray-400">{player.completedCount} levels</p>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -641,7 +802,9 @@ export default function Home() {
                   {rouletteLevel.mode || 'classic'}
                 </span>
                 <h3 className="text-2xl font-black text-[#007acc]">{rouletteLevel.title}</h3>
-                <p className="text-xs text-gray-500">Creator: {rouletteLevel.creator}</p>
+                <p className="text-xs text-gray-500">
+                  Creator: {rouletteLevel.creator} {rouletteLevel.gd_level_id ? `• ID: ${rouletteLevel.gd_level_id}` : ''}
+                </p>
               </div>
             ) : (
               <p className="text-sm text-gray-500">No approved levels yet to spin.</p>
@@ -653,7 +816,6 @@ export default function Home() {
         {/* PROFILE EDITOR & PENDING/WARNINGS TAB */}
         {activeTab === 'profile' && currentUser && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Profile Settings & Socials */}
             <div className={`lg:col-span-6 p-6 rounded border shadow space-y-4 ${cardClass}`}>
               <h2 className="text-xl font-bold border-b pb-2">Profile Editor ({currentUser.username})</h2>
               <form onSubmit={handleProfileSave} className="space-y-3">
@@ -688,9 +850,7 @@ export default function Home() {
               </form>
             </div>
 
-            {/* Right: Pending Items & Account Warnings */}
             <div className="lg:col-span-6 space-y-6">
-              {/* Warnings */}
               <div className={`p-6 rounded border shadow ${cardClass}`}>
                 <h3 className="text-lg font-bold border-b pb-2 mb-3 text-rose-600">
                   Account Warnings ({currentUser.warnings?.length || 0})
@@ -708,7 +868,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Pending Levels & Records */}
               <div className={`p-6 rounded border shadow space-y-4 ${cardClass}`}>
                 <h3 className="text-lg font-bold border-b pb-2">My Pending Submissions</h3>
                 <div>
@@ -747,7 +906,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* MOD PANEL (STRICTLY FOR finniscrazyy, mrconey, dhavvin_09, lopikpl) */}
+        {/* MOD PANEL */}
         {activeTab === 'mod' && isMod && (
           <div className="space-y-6">
             {/* 1. Pending Goofy Levels */}
@@ -770,6 +929,11 @@ export default function Home() {
                           <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
                             {lvl.mode || 'classic'}
                           </span>
+                          {lvl.gd_level_id && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-200 text-gray-800">
+                              ID: {lvl.gd_level_id}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-500">
                           Creator: {lvl.creator} | Verifier: {lvl.verifier} | {Number(lvl.points).toFixed(2)} pts
@@ -923,7 +1087,7 @@ export default function Home() {
                 </p>
                 <input
                   type="text"
-                  placeholder="Filter shown goofy levels..."
+                  placeholder="Filter by level name, creator, or ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className={inputClass}
@@ -948,23 +1112,72 @@ export default function Home() {
                         <img src={ytThumb} alt={lvl.title} className="w-full h-full object-cover" />
                       </a>
                       <div className="flex-1 text-center sm:text-left">
-                        <h2 className="text-lg font-bold">
-                          #{idx + 1} - {lvl.title}
-                        </h2>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          <h2 className="text-lg font-bold">
+                            #{idx + 1} — {lvl.title}
+                          </h2>
+                          {lvl.gd_level_id && (
+                            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
+                              ID: {lvl.gd_level_id}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           published by <strong>{lvl.creator}</strong>, verified by <strong>{lvl.verifier || lvl.creator}</strong>
                         </p>
                         <p className="text-xs text-gray-400 italic mt-1">
                           {Number(lvl.points || 250).toFixed(2)} (100%) points
                         </p>
+
+                        {/* Victors List */}
+                        {lvl.victors && lvl.victors.length > 0 && (
+                          <div className="mt-1.5 text-xs text-gray-500">
+                            <span className="font-semibold">Victors: </span>
+                            {lvl.victors.map((v, vIdx) => (
+                              <span key={vIdx}>
+                                {v.video_url ? (
+                                  <a
+                                    href={v.video_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[#007acc] hover:underline font-medium"
+                                  >
+                                    {v.username}
+                                  </a>
+                                ) : (
+                                  <span className="font-medium">{v.username}</span>
+                                )}
+                                {vIdx < lvl.victors!.length - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
+
+                      {/* MOD EDIT & DELETE BUTTONS */}
+                      {isMod && (
+                        <div className="flex sm:flex-col gap-2 shrink-0">
+                          <button
+                            onClick={() => setEditingLevel({ ...lvl, victors: lvl.victors || [] })}
+                            className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLevel(lvl.id, lvl.title)}
+                            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })
               )}
             </div>
 
-            {/* RIGHT 4 COLS: SIDEBAR (Submit Record, Submit Level, Discord, Staff) */}
+            {/* RIGHT 4 COLS: SIDEBAR */}
             <aside className="lg:col-span-4 space-y-5">
               {/* Submit Record Sidebar Box */}
               <div className={`p-5 rounded border border-dashed shadow text-center ${cardClass}`}>
@@ -1022,8 +1235,8 @@ export default function Home() {
                       <label className="block text-xs font-semibold mb-1">Mod Notes (Optional)</label>
                       <textarea value={recNotes} onChange={(e) => setRecNotes(e.target.value)} className={`${inputClass} h-16`} />
                     </div>
-                    <button type="submit" className="w-full bg-emerald-600 text-white font-bold text-xs py-2.5 rounded">
-                      Send Record to Mods
+                    <button type="submit" className="w-full bg-[#007acc] text-white font-bold text-xs py-2.5 rounded">
+                      Submit Record
                     </button>
                   </form>
                 )}
@@ -1031,13 +1244,13 @@ export default function Home() {
 
               {/* Submit Level Sidebar Box */}
               <div className={`p-5 rounded border border-dashed shadow text-center ${cardClass}`}>
-                <h3 className="text-lg font-bold border-b pb-2 mb-2">Submit Goofy Level</h3>
+                <h3 className="text-lg font-bold border-b pb-2 mb-2">Submit Level</h3>
                 <p className="text-xs text-gray-500 mb-3">
-                  Suggest a new Classic or Platformer level. Thumbnail is grabbed automatically from the YouTube verification video.
+                  Suggest a new Classic or Platformer Goofy Level for list placement.
                 </p>
                 <button
                   onClick={() => setSidebarForm(sidebarForm === 'level' ? 'none' : 'level')}
-                  className="w-full bg-[#007acc] hover:bg-[#0062a3] text-white font-semibold text-sm py-2 rounded transition"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2 rounded transition"
                 >
                   {sidebarForm === 'level' ? 'Close Form' : 'Open Submit Level'}
                 </button>
@@ -1045,33 +1258,35 @@ export default function Home() {
                 {sidebarForm === 'level' && (
                   <form onSubmit={handleLevelSubmit} className="mt-4 pt-4 border-t text-left space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold mb-1">Level Type</label>
+                      <label className="block text-xs font-semibold mb-1">Category</label>
                       <select
                         value={lvlMode}
                         onChange={(e) => setLvlMode(e.target.value as 'classic' | 'platformer')}
                         className={inputClass}
                       >
-                        <option value="classic">Classic Level</option>
-                        <option value="platformer">Platformer Level</option>
+                        <option value="classic">Classic Goofy Level</option>
+                        <option value="platformer">Platformer Goofy Level</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold mb-1">Level Name *</label>
-                      <input required type="text" value={lvlTitle} onChange={(e) => setLvlTitle(e.target.value)} className={inputClass} />
+                      <label className="block text-xs font-semibold mb-1">Level Title *</label>
+                      <input required type="text" placeholder="e.g. Goofy Circles" value={lvlTitle} onChange={(e) => setLvlTitle(e.target.value)} className={inputClass} />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-semibold mb-1">Creator *</label>
-                        <input required type="text" value={lvlCreator} onChange={(e) => setLvlCreator(e.target.value)} className={inputClass} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold mb-1">Verifier *</label>
-                        <input required type="text" value={lvlVerifier} onChange={(e) => setLvlVerifier(e.target.value)} className={inputClass} />
-                      </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Level ID (GD)</label>
+                      <input type="text" placeholder="e.g. 94821044" value={lvlGdId} onChange={(e) => setLvlGdId(e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Creator *</label>
+                      <input required type="text" placeholder="Creator name" value={lvlCreator} onChange={(e) => setLvlCreator(e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold mb-1">Verifier *</label>
+                      <input required type="text" placeholder="Verifier username" value={lvlVerifier} onChange={(e) => setLvlVerifier(e.target.value)} className={inputClass} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold mb-1">Verification YouTube URL *</label>
-                      <input required type="url" placeholder="https://youtu.be/..." value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
+                      <input required type="url" placeholder="https://youtube.com/watch?v=..." value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold mb-1">Suggested Points</label>
@@ -1126,6 +1341,271 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* MOD EDIT LEVEL MODAL */}
+      {editingLevel && isMod && (
+        <div
+          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50"
+          onClick={() => setEditingLevel(null)}
+        >
+          <div
+            className={`max-w-lg w-full p-6 rounded-lg border shadow-xl space-y-4 max-h-[90vh] overflow-y-auto ${cardClass}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b pb-2">
+              <h2 className="text-xl font-bold">Edit Level — {editingLevel.title}</h2>
+              <button onClick={() => setEditingLevel(null)} className="text-gray-400 hover:text-rose-500 font-bold text-lg">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveEditedLevel} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1">Level Title</label>
+                <input
+                  required
+                  type="text"
+                  value={editingLevel.title}
+                  onChange={(e) => setEditingLevel({ ...editingLevel, title: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Creator</label>
+                  <input
+                    required
+                    type="text"
+                    value={editingLevel.creator}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, creator: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Verifier</label>
+                  <input
+                    type="text"
+                    value={editingLevel.verifier || ''}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, verifier: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Points</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editingLevel.points || 0}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, points: parseFloat(e.target.value) })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Level ID (GD)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 94821044"
+                    value={editingLevel.gd_level_id || ''}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Mode</label>
+                  <select
+                    value={editingLevel.mode || 'classic'}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, mode: e.target.value as 'classic' | 'platformer' })}
+                    className={inputClass}
+                  >
+                    <option value="classic">Classic</option>
+                    <option value="platformer">Platformer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Verification Video URL</label>
+                <input
+                  type="url"
+                  value={editingLevel.verification_url || ''}
+                  onChange={(e) => setEditingLevel({ ...editingLevel, verification_url: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+
+              {/* Manage Victors Section */}
+              <div className="border-t pt-3 space-y-2">
+                <label className="block text-xs font-bold">Victors List</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Victor username"
+                    value={newVictorName}
+                    onChange={(e) => setNewVictorName(e.target.value)}
+                    className={inputClass}
+                  />
+                  <input
+                    type="url"
+                    placeholder="Video URL (optional)"
+                    value={newVictorVideo}
+                    onChange={(e) => setNewVictorVideo(e.target.value)}
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={addVictorToEditingLevel}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 rounded text-sm shrink-0"
+                  >
+                    + Add
+                  </button>
+                </div>
+
+                {(editingLevel.victors || []).length > 0 && (
+                  <div className="max-h-32 overflow-y-auto space-y-1 pt-1">
+                    {(editingLevel.victors || []).map((v, i) => (
+                      <div key={i} className="flex justify-between items-center text-xs px-2.5 py-1.5 rounded bg-black/10 dark:bg-white/10">
+                        <span>
+                          <strong>{v.username}</strong> {v.video_url ? `(${v.video_url})` : ''}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeVictorFromEditingLevel(i)}
+                          className="text-rose-500 font-bold hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setEditingLevel(null)}
+                  className="px-4 py-2 rounded border text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-[#007acc] text-white text-xs font-bold"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* LEADERBOARD PLAYER STATS MODAL */}
+      {selectedPlayer && (
+        <div
+          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50"
+          onClick={() => setSelectedPlayer(null)}
+        >
+          <div
+            className={`max-w-lg w-full p-6 rounded-lg border shadow-xl space-y-4 max-h-[90vh] overflow-y-auto ${cardClass}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center border-b pb-3">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={`https://flagcdn.com/w20/${selectedPlayer.country.toLowerCase()}.png`}
+                  alt={selectedPlayer.country}
+                  className="w-6 h-4 object-cover border border-gray-300"
+                />
+                <div>
+                  <h2 className="text-xl font-bold">{selectedPlayer.display_name}</h2>
+                  <p className="text-xs text-gray-400">@{selectedPlayer.username}</p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedPlayer(null)} className="text-gray-400 hover:text-rose-500 font-bold text-xl">
+                ✕
+              </button>
+            </div>
+
+            {/* Social Links */}
+            {(selectedPlayer.youtube || selectedPlayer.discord || selectedPlayer.twitter) && (
+              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                {selectedPlayer.youtube && <span className="px-2 py-1 rounded bg-black/5 dark:bg-white/5">YouTube: <strong>{selectedPlayer.youtube}</strong></span>}
+                {selectedPlayer.discord && <span className="px-2 py-1 rounded bg-black/5 dark:bg-white/5">Discord: <strong>{selectedPlayer.discord}</strong></span>}
+                {selectedPlayer.twitter && <span className="px-2 py-1 rounded bg-black/5 dark:bg-white/5">X: <strong>{selectedPlayer.twitter}</strong></span>}
+              </div>
+            )}
+
+            {/* Summary Stat Boxes */}
+            <div className="grid grid-cols-2 gap-3 text-center">
+              <div className="p-3 rounded border border-gray-200 dark:border-gray-700">
+                <p className="text-[11px] uppercase font-bold text-gray-400">Total Points</p>
+                <p className="text-xl font-black text-[#007acc]">{selectedPlayer.totalPoints.toFixed(2)}</p>
+              </div>
+              <div className="p-3 rounded border border-gray-200 dark:border-gray-700">
+                <p className="text-[11px] uppercase font-bold text-gray-400">Levels Beaten / Verified</p>
+                <p className="text-xl font-black">{selectedPlayer.completedCount}</p>
+              </div>
+            </div>
+
+            {/* Hardest Level */}
+            <div className="p-3 rounded border border-gray-200 dark:border-gray-700">
+              <p className="text-[11px] uppercase font-bold text-gray-400">Hardest Completion</p>
+              {selectedPlayer.hardestLevel ? (
+                <p className="font-bold text-sm text-amber-500 mt-0.5">
+                  {selectedPlayer.hardestLevel.title} ({Number(selectedPlayer.hardestLevel.points || 0).toFixed(2)} pts)
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-0.5">No 100% completions yet.</p>
+              )}
+            </div>
+
+            {/* Completed & Verified Levels List */}
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-400 mb-2">
+                Levels Breakdown ({selectedPlayer.entries.length})
+              </p>
+              {selectedPlayer.entries.length === 0 ? (
+                <p className="text-xs text-gray-500">No approved records or verifications yet.</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-1.5">
+                  {selectedPlayer.entries.map((entry, i) => (
+                    <div
+                      key={i}
+                      className="text-xs px-3 py-2 rounded border border-gray-200 dark:border-gray-700 flex justify-between items-center"
+                    >
+                      <div className="flex items-center gap-2">
+                        {entry.videoUrl ? (
+                          <a href={entry.videoUrl} target="_blank" rel="noreferrer" className="font-bold text-[#007acc] hover:underline">
+                            {entry.level.title}
+                          </a>
+                        ) : (
+                          <span className="font-bold">{entry.level.title}</span>
+                        )}
+                        {entry.role === 'Verifier' && (
+                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800">
+                            Verifier
+                          </span>
+                        )}
+                        {entry.role === 'Progress' && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-800">
+                            {entry.progress}%
+                          </span>
+                        )}
+                      </div>
+                      <span className="font-mono font-semibold text-gray-500">
+                        +{entry.pointsEarned.toFixed(2)} pts
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
