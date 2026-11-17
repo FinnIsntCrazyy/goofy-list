@@ -1,3 +1,4 @@
+```tsx
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -183,6 +184,7 @@ export default function Home() {
   const [lvlPoints, setLvlPoints] = useState('250.00')
 
   // Profile Editor states
+  const [editDisplayName, setEditDisplayName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPassword, setEditPassword] = useState('')
   const [editCountry, setEditCountry] = useState('pl')
@@ -228,6 +230,7 @@ export default function Home() {
   }
 
   function syncProfileEditor(prof: Profile) {
+    setEditDisplayName(prof.display_name || prof.username || '')
     setEditEmail(prof.email || '')
     setEditCountry(prof.country || 'pl')
     setEditYoutube(prof.youtube || '')
@@ -467,6 +470,12 @@ export default function Home() {
     e.preventDefault()
     if (!currentUser) return
 
+    const trimmedDisplay = editDisplayName.trim()
+    if (!trimmedDisplay) {
+      alert('Display name cannot be empty!')
+      return
+    }
+
     if (editPassword.trim().length >= 6) {
       const { error: pwErr } = await supabase.auth.updateUser({ password: editPassword.trim() })
       if (pwErr) alert('Password update note: ' + pwErr.message)
@@ -480,6 +489,7 @@ export default function Home() {
     const { error } = await supabase
       .from('profiles')
       .update({
+        display_name: trimmedDisplay,
         email: editEmail.trim(),
         country: editCountry,
         youtube: editYoutube.trim(),
@@ -491,6 +501,7 @@ export default function Home() {
     if (!error) {
       const updated = {
         ...currentUser,
+        display_name: trimmedDisplay,
         email: editEmail.trim(),
         country: editCountry,
         youtube: editYoutube.trim(),
@@ -500,7 +511,7 @@ export default function Home() {
       setCurrentUser(updated)
       setEditPassword('')
       refreshAll()
-      showNotice('Profile settings & socials saved!')
+      showNotice('Profile settings & display name saved!')
     }
   }
 
@@ -523,7 +534,7 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  // LEADERBOARD CALCULATION (Approved Submissions + Manual Victors + Verifier Points)
+  // LEADERBOARD CALCULATION
   const approvedLevels = levels.filter((l) => (l.status || 'approved') === 'approved')
   const pendingLevels = levels.filter((l) => l.status === 'pending')
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
@@ -532,11 +543,10 @@ export default function Home() {
   const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
       const uLower = prof.username.trim().toLowerCase()
-      const dLower = prof.display_name.trim().toLowerCase()
+      const dLower = (prof.display_name || prof.username).trim().toLowerCase()
       const seenLevelIds = new Set<number>()
       const entries: PlayerLeaderboardRow['entries'] = []
 
-      // 1. Check Verifications on approved levels
       approvedLevels.forEach((lvl) => {
         const verLower = (lvl.verifier || '').trim().toLowerCase()
         if (verLower && (verLower === uLower || verLower === dLower) && !seenLevelIds.has(lvl.id)) {
@@ -551,7 +561,6 @@ export default function Home() {
         }
       })
 
-      // 2. Check Approved Record Submissions
       approvedSubs
         .filter((s) => s.player_username.trim().toLowerCase() === uLower)
         .forEach((sub) => {
@@ -569,7 +578,6 @@ export default function Home() {
           })
         })
 
-      // 3. Check Manual Victors added via Edit Level modal
       approvedLevels.forEach((lvl) => {
         if (seenLevelIds.has(lvl.id)) return
         const manualVictor = (lvl.victors || []).find((v) => {
@@ -780,9 +788,9 @@ export default function Home() {
               <div>
                 <label className="block text-xs font-semibold mb-1">Country</label>
                 <select value={regCountry} onChange={(e) => setRegCountry(e.target.value)} className={inputClass}>
-{COUNTRIES.map((c) => (
-  <option key={c.code} value={c.code}>{c.name}</option>
-))}
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -798,636 +806,324 @@ export default function Home() {
           </div>
         )}
 
-        {/* LEADERBOARD TAB (CLICKABLE ACCOUNTS + VERIFIER POINTS) */}
-        {activeTab === 'leaderboard' && (
-          <div className={`max-w-3xl mx-auto p-6 rounded border shadow space-y-4 ${cardClass}`}>
-            <h2 className="text-2xl font-bold border-b pb-2">Goofy Levels Leaderboard</h2>
-            <p className="text-xs text-gray-500">
-              Click on any player account to view their stats, completions, and verifications.
-            </p>
-            {leaderboard.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4">No registered players on the leaderboard yet.</p>
-            ) : (
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {leaderboard.map((player, idx) => (
-                  <button
-                    key={player.id}
-                    type="button"
-                    onClick={() => setSelectedPlayer(player)}
-                    className="w-full text-left py-3 px-2 rounded hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-black text-base w-8 text-gray-400">#{idx + 1}</span>
-                      <img
-                        src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`}
-                        alt={player.country}
-                        className="w-5 h-3.5 object-cover border border-gray-300"
-                      />
-                      <div>
-                        <p className="font-bold text-sm hover:text-[#007acc] transition">{player.display_name}</p>
-                        <div className="flex gap-3 text-[11px] text-gray-400">
-                          {player.youtube && <span>YT: {player.youtube}</span>}
-                          {player.discord && <span>Discord: {player.discord}</span>}
-                          {player.twitter && <span>X: {player.twitter}</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm text-[#007acc]">{player.totalPoints.toFixed(2)} pts</p>
-                      <p className="text-[11px] text-gray-400">{player.completedCount} levels</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ROULETTE TAB */}
-        {activeTab === 'roulette' && (
-          <div className={`max-w-xl mx-auto p-8 rounded border shadow text-center space-y-4 ${cardClass}`}>
-            <h2 className="text-2xl font-bold">Goofy Levels Roulette</h2>
-            {rouletteLevel ? (
-              <div className="p-4 border rounded space-y-2">
-                <img
-                  src={getYouTubeThumbnail(rouletteLevel.verification_url || rouletteLevel.thumbnail, rouletteLevel.title)}
-                  alt={rouletteLevel.title}
-                  className="w-64 h-36 object-cover mx-auto rounded"
-                />
-                <span className="inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-                  {rouletteLevel.mode || 'classic'}
-                </span>
-                <h3 className="text-2xl font-black text-[#007acc]">{rouletteLevel.title}</h3>
-                <p className="text-xs text-gray-500">
-                  Creator: {rouletteLevel.creator} {rouletteLevel.gd_level_id ? `• ID: ${rouletteLevel.gd_level_id}` : ''}
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">No approved levels yet to spin.</p>
-            )}
-            <button onClick={spinRoulette} className="bg-[#007acc] text-white font-bold px-6 py-2.5 rounded">Spin Again</button>
-          </div>
-        )}
-
-        {/* PROFILE EDITOR & PENDING/WARNINGS TAB */}
+        {/* PROFILE TAB (WITH EDIT DISPLAY NAME) */}
         {activeTab === 'profile' && currentUser && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className={`lg:col-span-6 p-6 rounded border shadow space-y-4 ${cardClass}`}>
-              <h2 className="text-xl font-bold border-b pb-2">Profile Editor ({currentUser.username})</h2>
-              <form onSubmit={handleProfileSave} className="space-y-3">
+          <div className={`max-w-2xl mx-auto p-6 rounded border shadow space-y-6 ${cardClass}`}>
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <span>{currentUser.display_name}</span>
+                  <img
+                    src={`https://flagcdn.com/w20/${currentUser.country.toLowerCase()}.png`}
+                    alt={currentUser.country}
+                    className="w-5 h-3.5 object-cover border border-gray-300"
+                  />
+                </h2>
+                <p className="text-xs text-gray-400">@{currentUser.username}</p>
+              </div>
+              {isMod && <span className="bg-amber-500 text-white text-xs px-2 py-1 rounded font-bold">Staff / Mod</span>}
+            </div>
+
+            {/* Warning notices if any */}
+            {(currentUser.warnings?.length || 0) > 0 && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-900 p-4 rounded text-xs space-y-1">
+                <p className="font-bold">Moderator Warnings ({currentUser.warnings.length}):</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {currentUser.warnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Profile Editor Form */}
+            <form onSubmit={handleProfileSave} className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#007acc]">Edit Profile Settings</h3>
+              
+              <div>
+                <label className="block text-xs font-semibold mb-1">Display Name</label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  maxLength={32}
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold mb-1">Email</label>
                   <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">New Password (leave blank to keep current)</label>
-                  <input type="password" placeholder="Min 6 characters" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Country</label>
-                  <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
-{COUNTRIES.map((c) => (
-  <option key={c.code} value={c.code}>{c.name}</option>
-))}
-                  </select>
-                </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-bold mb-2">Social Links</p>
-                  <div className="space-y-2">
-                    <input type="text" placeholder="YouTube Handle / URL" value={editYoutube} onChange={(e) => setEditYoutube(e.target.value)} className={inputClass} />
-                    <input type="text" placeholder="Discord Username" value={editDiscord} onChange={(e) => setEditDiscord(e.target.value)} className={inputClass} />
-                    <input type="text" placeholder="Twitter / X Handle" value={editTwitter} onChange={(e) => setEditTwitter(e.target.value)} className={inputClass} />
-                  </div>
-                </div>
-                <button type="submit" className="w-full bg-[#007acc] text-white font-bold py-2 rounded">Save Profile</button>
-              </form>
-            </div>
-
-            <div className="lg:col-span-6 space-y-6">
-              <div className={`p-6 rounded border shadow ${cardClass}`}>
-                <h3 className="text-lg font-bold border-b pb-2 mb-3 text-rose-600">
-                  Account Warnings ({currentUser.warnings?.length || 0})
-                </h3>
-                {!currentUser.warnings || currentUser.warnings.length === 0 ? (
-                  <p className="text-xs text-gray-500">Clean record! You have 0 warnings.</p>
-                ) : (
-                  <ul className="space-y-2 text-xs">
-                    {currentUser.warnings.map((w, i) => (
-                      <li key={i} className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-900 font-semibold">
-                        {w}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className={`p-6 rounded border shadow space-y-4 ${cardClass}`}>
-                <h3 className="text-lg font-bold border-b pb-2">My Pending Submissions</h3>
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">Pending Records</p>
-                  {pendingSubs.filter((s) => s.player_username === currentUser.username).length === 0 ? (
-                    <p className="text-xs text-gray-500">No pending records.</p>
-                  ) : (
-                    pendingSubs
-                      .filter((s) => s.player_username === currentUser.username)
-                      .map((s) => (
-                        <div key={s.id} className="text-xs py-1.5 border-b flex justify-between">
-                          <span><strong>{s.level_title}</strong> ({s.mode}) — {s.progress}%</span>
-                          <span className="text-amber-600 font-bold">Pending</span>
-                        </div>
-                      ))
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">Pending Levels</p>
-                  {pendingLevels.filter((l) => l.submitted_by === currentUser.username).length === 0 ? (
-                    <p className="text-xs text-gray-500">No pending levels.</p>
-                  ) : (
-                    pendingLevels
-                      .filter((l) => l.submitted_by === currentUser.username)
-                      .map((l) => (
-                        <div key={l.id} className="text-xs py-1.5 border-b flex justify-between">
-                          <span><strong>{l.title}</strong> ({l.mode})</span>
-                          <span className="text-amber-600 font-bold">Pending</span>
-                        </div>
-                      ))
-                  )}
+                  <input type="password" placeholder="min 6 chars" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} className={inputClass} />
                 </div>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Country</label>
+                <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">YouTube URL / Handle</label>
+                  <input type="text" placeholder="e.g. @FinnIsntCrazyy" value={editYoutube} onChange={(e) => setEditYoutube(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Discord Tag</label>
+                  <input type="text" placeholder="e.g. finniscrazyy" value={editDiscord} onChange={(e) => setEditDiscord(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">X / Twitter</label>
+                  <input type="text" placeholder="e.g. @finniscrazyy" value={editTwitter} onChange={(e) => setEditTwitter(e.target.value)} className={inputClass} />
+                </div>
+              </div>
+
+              <button type="submit" className="bg-[#007acc] text-white font-bold text-xs px-4 py-2 rounded">
+                Save Profile Changes
+              </button>
+            </form>
           </div>
         )}
 
-        {/* MOD PANEL */}
-        {activeTab === 'mod' && isMod && (
+        {/* CLASSIC / PLATFORMER LEVEL LIST VIEW */}
+        {(activeTab === 'classic' || activeTab === 'platformer') && (
           <div className="space-y-6">
-            {/* 1. Pending Goofy Levels */}
-            <div className={`p-6 rounded border shadow ${cardClass}`}>
-              <h2 className="text-xl font-bold border-b pb-2 mb-4">Pending Goofy Levels ({pendingLevels.length})</h2>
-              {pendingLevels.length === 0 ? (
-                <p className="text-sm text-gray-500">No pending levels waiting for review.</p>
-              ) : (
-                pendingLevels.map((lvl) => (
-                  <div key={lvl.id} className="flex flex-col sm:flex-row justify-between items-center gap-4 border-b py-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={getYouTubeThumbnail(lvl.verification_url || lvl.thumbnail, lvl.title)}
-                        alt={lvl.title}
-                        className="w-28 h-16 object-cover rounded bg-black"
-                      />
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-black uppercase tracking-tight">
+                  {activeTab === 'platformer' ? 'Platformer Goofy Levels' : 'Classic Goofy Levels'}
+                </h1>
+                <p className="text-xs text-gray-500">Demon list rated by difficulty and community enjoyment.</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Search level or GD ID..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className={`${inputClass} w-60`}
+                />
+                {currentUser && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSidebarForm(sidebarForm === 'record' ? 'none' : 'record')}
+                      className="bg-[#007acc] text-white text-xs font-bold px-3 py-2 rounded whitespace-nowrap"
+                    >
+                      {sidebarForm === 'record' ? 'Close Form' : '+ Submit Record'}
+                    </button>
+                    <button
+                      onClick={() => setSidebarForm(sidebarForm === 'level' ? 'none' : 'level')}
+                      className="bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded whitespace-nowrap"
+                    >
+                      {sidebarForm === 'level' ? 'Close Form' : '+ Submit Level'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SUBMIT RECORD / LEVEL DRAWER */}
+            {sidebarForm === 'record' && currentUser && (
+              <form onSubmit={handleRecordSubmit} className={`p-4 rounded border shadow space-y-3 ${cardClass}`}>
+                <h3 className="font-bold text-sm uppercase text-[#007acc]">Submit Record / Completion</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Category</label>
+                    <select value={recMode} onChange={(e) => setRecMode(e.target.value as any)} className={inputClass}>
+                      <option value="classic">Classic</option>
+                      <option value="platformer">Platformer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Level</label>
+                    <select
+                      value={recLevelId}
+                      onChange={(e) => setRecLevelId(Number(e.target.value))}
+                      className={inputClass}
+                    >
+                      {approvedLevels
+                        .filter((l) => (l.mode || 'classic') === recMode)
+                        .map((l) => (
+                          <option key={l.id} value={l.id}>{l.title} ({l.points} pts)</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Progress (%)</label>
+                    <input type="number" min={1} max={100} value={recProgress} onChange={(e) => setRecProgress(Number(e.target.value))} className={inputClass} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Video Proof URL</label>
+                    <input required type="url" placeholder="https://youtube.com/..." value={recVideo} onChange={(e) => setRecVideo(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Enjoyment (1-10)</label>
+                    <input type="number" min={1} max={10} value={recEnjoyment} onChange={(e) => setRecEnjoyment(Number(e.target.value))} className={inputClass} />
+                  </div>
+                </div>
+                <button type="submit" className="bg-[#007acc] text-white font-bold text-xs px-4 py-2 rounded">
+                  Send Record for Review
+                </button>
+              </form>
+            )}
+
+            {sidebarForm === 'level' && currentUser && (
+              <form onSubmit={handleLevelSubmit} className={`p-4 rounded border shadow space-y-3 ${cardClass}`}>
+                <h3 className="font-bold text-sm uppercase text-emerald-600">Submit New Goofy Level</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Category</label>
+                    <select value={lvlMode} onChange={(e) => setLvlMode(e.target.value as any)} className={inputClass}>
+                      <option value="classic">Classic</option>
+                      <option value="platformer">Platformer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Level Title</label>
+                    <input required type="text" placeholder="Level Name" value={lvlTitle} onChange={(e) => setLvlTitle(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Creator</label>
+                    <input required type="text" placeholder="Creator Name" value={lvlCreator} onChange={(e) => setLvlCreator(e.target.value)} className={inputClass} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">GD Level ID</label>
+                    <input type="text" placeholder="12345678" value={lvlGdId} onChange={(e) => setLvlGdId(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Verifier</label>
+                    <input type="text" placeholder="Verifier (default: you)" value={lvlVerifier} onChange={(e) => setLvlVerifier(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Verification Video URL</label>
+                    <input required type="url" placeholder="https://youtube.com/..." value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Points</label>
+                    <input type="number" step="0.01" value={lvlPoints} onChange={(e) => setLvlPoints(e.target.value)} className={inputClass} />
+                  </div>
+                </div>
+                <button type="submit" className="bg-emerald-600 text-white font-bold text-xs px-4 py-2 rounded">
+                  Submit Level for Approval
+                </button>
+              </form>
+            )}
+
+            {/* LEVEL LIST DISPLAY */}
+            {shownLevels.length === 0 ? (
+              <div className={`p-8 text-center rounded border ${cardClass}`}>
+                <p className="text-sm text-gray-500">No approved levels found in this category.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {shownLevels.map((lvl, index) => (
+                  <div key={lvl.id} className={`p-4 rounded border shadow flex flex-col sm:flex-row items-center justify-between gap-4 ${cardClass}`}>
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <span className="font-black text-xl text-gray-400 w-10">#{index + 1}</span>
+                      <a href={lvl.verification_url || '#'} target="_blank" rel="noreferrer" className="shrink-0">
+                        <img
+                          src={lvl.thumbnail || getYouTubeThumbnail(lvl.verification_url, lvl.title)}
+                          alt={lvl.title}
+                          className="w-32 h-18 object-cover rounded border border-gray-300 hover:opacity-90 transition"
+                        />
+                      </a>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold">{lvl.title}</span>
-                          <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-                            {lvl.mode || 'classic'}
-                          </span>
+                          <h3 className="font-bold text-base hover:text-[#007acc] transition">{lvl.title}</h3>
                           {lvl.gd_level_id && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-200 text-gray-800">
+                            <span className="text-[10px] bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300 font-mono">
                               ID: {lvl.gd_level_id}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-gray-500">
-                          Creator: {lvl.creator} | Verifier: {lvl.verifier} | {Number(lvl.points).toFixed(2)} pts
+                          By <span className="font-semibold">{lvl.creator}</span> | Verified by <span className="font-semibold text-[#007acc]">{lvl.verifier || 'Unknown'}</span>
                         </p>
-                        {lvl.verification_url && (
-                          <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="text-xs text-[#007acc] underline">
-                            Watch Verification Video
-                          </a>
-                        )}
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Victors: {(lvl.victors || []).length} players completed
+                        </p>
                       </div>
                     </div>
-                    <div className="space-x-2">
-                      <button
-                        onClick={async () => {
-                          await supabase.from('demons').update({ status: 'approved' }).eq('id', lvl.id)
-                          refreshAll()
-                        }}
-                        className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded"
-                      >
-                        Approve Level
-                      </button>
-                      <button
-                        onClick={async () => {
-                          await supabase.from('demons').delete().eq('id', lvl.id)
-                          refreshAll()
-                        }}
-                        className="bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
 
-            {/* 2. Pending Record Submissions */}
-            <div className={`p-6 rounded border shadow ${cardClass}`}>
-              <h2 className="text-xl font-bold border-b pb-2 mb-4">Pending Record Submissions ({pendingSubs.length})</h2>
-              {pendingSubs.length === 0 ? (
-                <p className="text-sm text-gray-500">No pending records.</p>
-              ) : (
-                pendingSubs.map((sub) => (
-                  <div key={sub.id} className="flex justify-between items-center border-b py-3">
-                    <div>
-                      <p className="font-bold">
-                        {sub.player_name} ({sub.player_username}) — {sub.level_title} [{sub.mode.toUpperCase()}] ({sub.progress}%)
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Video: <a href={sub.video_url} target="_blank" rel="noreferrer" className="underline text-[#007acc]">{sub.video_url}</a> | Enjoyment: {sub.enjoyment}/10
-                      </p>
-                      {sub.mod_notes && <p className="text-xs italic text-amber-600 mt-1">Notes: {sub.mod_notes}</p>}
-                    </div>
-                    <div className="space-x-2">
-                      <button
-                        onClick={async () => {
-                          await supabase.from('submissions').update({ status: 'approved' }).eq('id', sub.id)
-                          refreshAll()
-                        }}
-                        className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={async () => {
-                          await supabase.from('submissions').delete().eq('id', sub.id)
-                          refreshAll()
-                        }}
-                        className="bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* 3. Issue Player Warning */}
-            <div className={`p-6 rounded border shadow ${cardClass}`}>
-              <h2 className="text-xl font-bold border-b pb-2 mb-4">Issue Player Warning</h2>
-              <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                <input required type="text" placeholder="Target username *" value={warnTargetUser} onChange={(e) => setWarnTargetUser(e.target.value)} className={`sm:col-span-4 ${inputClass}`} />
-                <input required type="text" placeholder="Warning reason *" value={warnReason} onChange={(e) => setWarnReason(e.target.value)} className={`sm:col-span-6 ${inputClass}`} />
-                <button type="submit" className="sm:col-span-2 bg-rose-600 text-white font-bold text-xs py-2 rounded">Send Warning</button>
-              </form>
-            </div>
-
-            {/* 4. Manage Public Staff Sidebar */}
-            <div className={`p-6 rounded border shadow ${cardClass}`}>
-              <h2 className="text-xl font-bold border-b pb-2 mb-4">Manage Sidebar Staff</h2>
-              <form onSubmit={async (e) => {
-                e.preventDefault()
-                if (!modName.trim()) return
-                await supabase.from('moderators').insert([{
-                  name: modName.trim(),
-                  clan: modClan.trim().toUpperCase(),
-                  country_code: modCountry.toLowerCase(),
-                  role: modRole,
-                }])
-                setModName('')
-                setModClan('')
-                refreshAll()
-              }} className="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-4">
-                <input type="text" placeholder="Clan" value={modClan} onChange={(e) => setModClan(e.target.value)} className={`sm:col-span-2 ${inputClass}`} />
-                <input required type="text" placeholder="Username *" value={modName} onChange={(e) => setModName(e.target.value)} className={`sm:col-span-4 ${inputClass}`} />
-                <select value={modCountry} onChange={(e) => setModCountry(e.target.value)} className={`sm:col-span-2 ${inputClass}`}>
-{COUNTRIES.map((c) => (
-  <option key={c.code} value={c.code}>{c.name} ({c.code.toUpperCase()})</option>
-))}
-                </select>
-                <select value={modRole} onChange={(e) => setModRole(e.target.value as 'editor' | 'helper')} className={`sm:col-span-2 ${inputClass}`}>
-                  <option value="editor">List Editor</option>
-                  <option value="helper">List Helper</option>
-                </select>
-                <button type="submit" className="sm:col-span-2 bg-[#007acc] text-white font-bold text-xs py-2 rounded">Add Staff</button>
-              </form>
-
-              {moderators.map((m) => (
-                <div key={m.id} className="flex justify-between items-center py-2 border-t text-xs">
-                  <div className="flex items-center gap-2">
-                    <img src={`https://flagcdn.com/w20/${m.country_code}.png`} alt="" className="w-4 h-3 object-cover" />
-                    <span className="font-bold">{m.clan ? `[${m.clan}] ` : ''}{m.name}</span>
-                    <span className="text-gray-400 uppercase">({m.role})</span>
-                  </div>
-                  <button
-                    onClick={async () => { await supabase.from('moderators').delete().eq('id', m.id); refreshAll() }}
-                    className="text-rose-500 font-semibold hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* CLASSIC & PLATFORMER GOOFY LEVELS LISTS + RIGHT SIDEBAR */}
-        {(activeTab === 'classic' || activeTab === 'platformer') && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* LEFT 8 COLS: GOOFY LEVELS */}
-            <div className="lg:col-span-8 space-y-4">
-              <div className={`p-6 rounded border shadow ${cardClass}`}>
-                <h1 className="text-2xl sm:text-3xl font-bold text-center mb-1">
-                  {activeTab === 'platformer' ? 'Platformer Goofy Levels List' : 'Classic Goofy Levels List'}
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-500 text-center mb-4">
-                  Ranked {activeTab} Goofy Levels with automatic verification video thumbnails.
-                </p>
-                <input
-                  type="text"
-                  placeholder="Filter by level name, creator, or ID..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-
-              {shownLevels.length === 0 ? (
-                <div className={`p-8 rounded border shadow text-center text-sm text-gray-500 ${cardClass}`}>
-                  No approved {activeTab} Goofy Levels yet. Use <strong>Submit Level</strong> on the right sidebar to suggest one!
-                </div>
-              ) : (
-                shownLevels.map((lvl, idx) => {
-                  const ytThumb = getYouTubeThumbnail(lvl.verification_url || lvl.thumbnail, lvl.title)
-                  return (
-                    <div key={lvl.id} className={`flex flex-col sm:flex-row items-center gap-4 p-4 rounded border shadow ${cardClass}`}>
-                      <a
-                        href={lvl.verification_url || '#'}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full sm:w-44 h-24 bg-black rounded overflow-hidden shrink-0 block"
-                      >
-                        <img src={ytThumb} alt={lvl.title} className="w-full h-full object-cover" />
-                      </a>
-                      <div className="flex-1 text-center sm:text-left">
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                          <h2 className="text-lg font-bold">
-                            #{idx + 1} — {lvl.title}
-                          </h2>
-                          {lvl.gd_level_id && (
-                            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">
-                              ID: {lvl.gd_level_id}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          published by <strong>{lvl.creator}</strong>, verified by <strong>{lvl.verifier || lvl.creator}</strong>
-                        </p>
-                        <p className="text-xs text-gray-400 italic mt-1">
-                          {Number(lvl.points || 250).toFixed(2)} (100%) points
-                        </p>
-
-                        {/* Victors List */}
-                        {lvl.victors && lvl.victors.length > 0 && (
-                          <div className="mt-1.5 text-xs text-gray-500">
-                            <span className="font-semibold">Victors: </span>
-                            {lvl.victors.map((v, vIdx) => (
-                              <span key={vIdx}>
-                                {v.video_url ? (
-                                  <a
-                                    href={v.video_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[#007acc] hover:underline font-medium"
-                                  >
-                                    {v.username}
-                                  </a>
-                                ) : (
-                                  <span className="font-medium">{v.username}</span>
-                                )}
-                                {vIdx < lvl.victors!.length - 1 ? ', ' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                    <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
+                      <div className="text-right">
+                        <span className="font-black text-lg text-[#007acc]">{Number(lvl.points || 0).toFixed(2)}</span>
+                        <span className="text-xs text-gray-400 block">points</span>
                       </div>
-
-                      {/* MOD EDIT & DELETE BUTTONS */}
                       {isMod && (
-                        <div className="flex sm:flex-col gap-2 shrink-0">
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => setEditingLevel({ ...lvl, victors: lvl.victors || [] })}
-                            className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded transition"
+                            onClick={() => setEditingLevel(lvl)}
+                            className="bg-amber-500 text-white text-xs px-2.5 py-1 rounded font-bold"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteLevel(lvl.id, lvl.title)}
-                            className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-1.5 rounded transition"
+                            className="bg-rose-600 text-white text-xs px-2.5 py-1 rounded font-bold"
                           >
                             Delete
                           </button>
                         </div>
                       )}
                     </div>
-                  )
-                })
-              )}
-            </div>
-
-            {/* RIGHT 4 COLS: SIDEBAR */}
-            <aside className="lg:col-span-4 space-y-5">
-              {/* Submit Record Sidebar Box */}
-              <div className={`p-5 rounded border border-dashed shadow text-center ${cardClass}`}>
-                <h3 className="text-lg font-bold border-b pb-2 mb-2">Submit Record</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  Submit a Classic or Platformer completion with video proof and enjoyment rating.
-                </p>
-                <button
-                  onClick={() => setSidebarForm(sidebarForm === 'record' ? 'none' : 'record')}
-                  className="w-full bg-[#007acc] hover:bg-[#0062a3] text-white font-semibold text-sm py-2 rounded transition"
-                >
-                  {sidebarForm === 'record' ? 'Close Form' : 'Open Submit Record'}
-                </button>
-
-                {sidebarForm === 'record' && (
-                  <form onSubmit={handleRecordSubmit} className="mt-4 pt-4 border-t text-left space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Category</label>
-                      <select
-                        value={recMode}
-                        onChange={(e) => setRecMode(e.target.value as 'classic' | 'platformer')}
-                        className={inputClass}
-                      >
-                        <option value="classic">Classic Goofy Level</option>
-                        <option value="platformer">Platformer Goofy Level</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Level</label>
-                      <select
-                        value={recLevelId}
-                        onChange={(e) => setRecLevelId(Number(e.target.value))}
-                        className={inputClass}
-                      >
-                        {approvedLevels
-                          .filter((l) => (l.mode || 'classic') === recMode)
-                          .map((l) => (
-                            <option key={l.id} value={l.id}>{l.title}</option>
-                          ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Progress (%)</label>
-                      <input type="number" min="1" max="100" value={recProgress} onChange={(e) => setRecProgress(Number(e.target.value))} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">YouTube Video Link *</label>
-                      <input required type="url" placeholder="https://youtube.com/watch?v=..." value={recVideo} onChange={(e) => setRecVideo(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Enjoyment: {recEnjoyment}/10</label>
-                      <input type="range" min="1" max="10" value={recEnjoyment} onChange={(e) => setRecEnjoyment(Number(e.target.value))} className="w-full" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Mod Notes (Optional)</label>
-                      <textarea value={recNotes} onChange={(e) => setRecNotes(e.target.value)} className={`${inputClass} h-16`} />
-                    </div>
-                    <button type="submit" className="w-full bg-[#007acc] text-white font-bold text-xs py-2.5 rounded">
-                      Submit Record
-                    </button>
-                  </form>
-                )}
+                  </div>
+                ))}
               </div>
-
-              {/* Submit Level Sidebar Box */}
-              <div className={`p-5 rounded border border-dashed shadow text-center ${cardClass}`}>
-                <h3 className="text-lg font-bold border-b pb-2 mb-2">Submit Level</h3>
-                <p className="text-xs text-gray-500 mb-3">
-                  Suggest a new Classic or Platformer Goofy Level for list placement.
-                </p>
-                <button
-                  onClick={() => setSidebarForm(sidebarForm === 'level' ? 'none' : 'level')}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2 rounded transition"
-                >
-                  {sidebarForm === 'level' ? 'Close Form' : 'Open Submit Level'}
-                </button>
-
-                {sidebarForm === 'level' && (
-                  <form onSubmit={handleLevelSubmit} className="mt-4 pt-4 border-t text-left space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Category</label>
-                      <select
-                        value={lvlMode}
-                        onChange={(e) => setLvlMode(e.target.value as 'classic' | 'platformer')}
-                        className={inputClass}
-                      >
-                        <option value="classic">Classic Goofy Level</option>
-                        <option value="platformer">Platformer Goofy Level</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Level Title *</label>
-                      <input required type="text" placeholder="e.g. Goofy Circles" value={lvlTitle} onChange={(e) => setLvlTitle(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Level ID (GD)</label>
-                      <input type="text" placeholder="e.g. 94821044" value={lvlGdId} onChange={(e) => setLvlGdId(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Creator *</label>
-                      <input required type="text" placeholder="Creator name" value={lvlCreator} onChange={(e) => setLvlCreator(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Verifier *</label>
-                      <input required type="text" placeholder="Verifier username" value={lvlVerifier} onChange={(e) => setLvlVerifier(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Verification YouTube URL *</label>
-                      <input required type="url" placeholder="https://youtube.com/watch?v=..." value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1">Suggested Points</label>
-                      <input type="number" step="0.01" value={lvlPoints} onChange={(e) => setLvlPoints(e.target.value)} className={inputClass} />
-                    </div>
-                    <button type="submit" className="w-full bg-emerald-600 text-white font-bold text-xs py-2.5 rounded">
-                      Send Level for Approval
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* Discord Panel */}
-              <div className={`p-5 rounded border shadow ${cardClass}`}>
-                <h3 className="font-bold border-b pb-2 mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-[#5865F2]" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028z" />
-                  </svg>
-                  <span>Discord Community</span>
-                </h3>
-                <ul className="space-y-2 text-xs font-semibold">
-                  <li className="text-[#007acc] cursor-pointer hover:underline">#link — Join Community Server</li>
-                  <li className="text-[#007acc] cursor-pointer hover:underline">#change-logs — Latest Updates</li>
-                </ul>
-              </div>
-
-              {/* Staff List */}
-              <div className={`p-5 rounded border shadow ${cardClass}`}>
-                <h3 className="font-bold border-b pb-2 mb-2">List Editors</h3>
-                <ul className="text-xs font-bold space-y-1.5 mb-4">
-                  {moderators.filter((m) => m.role === 'editor').map((ed) => (
-                    <li key={ed.id} className="flex items-center gap-2">
-                      <img src={`https://flagcdn.com/w20/${ed.country_code}.png`} className="w-4 h-3 object-cover border border-gray-300" alt="" />
-                      <span>{ed.clan ? `[${ed.clan}] ` : ''}{ed.name}</span>
-                    </li>
-                  ))}
-                  {moderators.filter((m) => m.role === 'editor').length === 0 && <li className="text-gray-400 font-normal">None added yet</li>}
-                </ul>
-
-                <h3 className="font-bold border-b pb-2 mb-2">List Helpers</h3>
-                <ul className="text-xs font-bold space-y-1.5">
-                  {moderators.filter((m) => m.role === 'helper').map((hp) => (
-                    <li key={hp.id} className="flex items-center gap-2">
-                      <img src={`https://flagcdn.com/w20/${hp.country_code}.png`} className="w-4 h-3 object-cover border border-gray-300" alt="" />
-                      <span>{hp.clan ? `[${hp.clan}] ` : ''}{hp.name}</span>
-                    </li>
-                  ))}
-                  {moderators.filter((m) => m.role === 'helper').length === 0 && <li className="text-gray-400 font-normal">None added yet</li>}
-                </ul>
-              </div>
-            </aside>
+            )}
           </div>
         )}
-      </main>
 
-      {/* MOD EDIT LEVEL MODAL */}
-      {editingLevel && isMod && (
-        <div
-          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50"
-          onClick={() => setEditingLevel(null)}
-        >
-          <div
-            className={`max-w-lg w-full p-6 rounded-lg border shadow-xl space-y-4 max-h-[90vh] overflow-y-auto ${cardClass}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center border-b pb-2">
-              <h2 className="text-xl font-bold">Edit Level — {editingLevel.title}</h2>
-              <button onClick={() => setEditingLevel(null)} className="text-gray-400 hover:text-rose-500 font-bold text-lg">✕</button>
-            </div>
-
-            <form onSubmit={handleSaveEditedLevel} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1">Level Title</label>
-                <input
-                  required
-                  type="text"
-                  value={editingLevel.title}
-                  onChange={(e) => setEditingLevel({ ...editingLevel, title: e.target.value })}
-                  className={inputClass}
-                />
+        {/* MOD EDIT LEVEL MODAL */}
+        {editingLevel && isMod && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <form onSubmit={handleSaveEditedLevel} className={`max-w-xl w-full p-6 rounded border shadow space-y-4 ${cardClass}`}>
+              <div className="flex justify-between items-center border-b pb-2">
+                <h3 className="text-lg font-bold">Edit Level: {editingLevel.title}</h3>
+                <button type="button" onClick={() => setEditingLevel(null)} className="font-bold text-gray-400 hover:text-gray-200">X</button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={editingLevel.title}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, title: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1">Creator</label>
                   <input
-                    required
                     type="text"
                     value={editingLevel.creator}
                     onChange={(e) => setEditingLevel({ ...editingLevel, creator: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">GD Level ID</label>
+                  <input
+                    type="text"
+                    value={editingLevel.gd_level_id || ''}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })}
                     className={inputClass}
                   />
                 </div>
@@ -1440,39 +1136,15 @@ export default function Home() {
                     className={inputClass}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold mb-1">Points</label>
                   <input
                     type="number"
                     step="0.01"
                     value={editingLevel.points || 0}
-                    onChange={(e) => setEditingLevel({ ...editingLevel, points: parseFloat(e.target.value) })}
+                    onChange={(e) => setEditingLevel({ ...editingLevel, points: Number(e.target.value) })}
                     className={inputClass}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Level ID (GD)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 94821044"
-                    value={editingLevel.gd_level_id || ''}
-                    onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Mode</label>
-                  <select
-                    value={editingLevel.mode || 'classic'}
-                    onChange={(e) => setEditingLevel({ ...editingLevel, mode: e.target.value as 'classic' | 'platformer' })}
-                    className={inputClass}
-                  >
-                    <option value="classic">Classic</option>
-                    <option value="platformer">Platformer</option>
-                  </select>
                 </div>
               </div>
 
@@ -1486,177 +1158,48 @@ export default function Home() {
                 />
               </div>
 
-              {/* Manage Victors Section */}
+              {/* Manage Victors inside modal */}
               <div className="border-t pt-3 space-y-2">
-                <label className="block text-xs font-bold">Victors List</label>
-                <div className="flex gap-2">
+                <label className="block text-xs font-bold uppercase text-[#007acc]">Manage Victors ({editingLevel.victors?.length || 0})</label>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {(editingLevel.victors || []).map((vic, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded text-xs">
+                      <span>{vic.username} {vic.video_url && `(${vic.video_url})`}</span>
+                      <button type="button" onClick={() => removeVictorFromEditingLevel(idx)} className="text-rose-600 font-bold">Remove</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                   <input
                     type="text"
-                    placeholder="Victor username"
+                    placeholder="Victor Username"
                     value={newVictorName}
                     onChange={(e) => setNewVictorName(e.target.value)}
                     className={inputClass}
                   />
                   <input
                     type="url"
-                    placeholder="Video URL (optional)"
+                    placeholder="Video Proof URL"
                     value={newVictorVideo}
                     onChange={(e) => setNewVictorVideo(e.target.value)}
                     className={inputClass}
                   />
-                  <button
-                    type="button"
-                    onClick={addVictorToEditingLevel}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 rounded text-sm shrink-0"
-                  >
-                    + Add
+                  <button type="button" onClick={addVictorToEditingLevel} className="bg-emerald-600 text-white font-bold text-xs rounded py-1.5">
+                    + Add Victor
                   </button>
                 </div>
-
-                {(editingLevel.victors || []).length > 0 && (
-                  <div className="max-h-32 overflow-y-auto space-y-1 pt-1">
-                    {(editingLevel.victors || []).map((v, i) => (
-                      <div key={i} className="flex justify-between items-center text-xs px-2.5 py-1.5 rounded bg-black/10 dark:bg-white/10">
-                        <span>
-                          <strong>{v.username}</strong> {v.video_url ? `(${v.video_url})` : ''}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeVictorFromEditingLevel(i)}
-                          className="text-rose-500 font-bold hover:underline"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t">
-                <button
-                  type="button"
-                  onClick={() => setEditingLevel(null)}
-                  className="px-4 py-2 rounded border text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded bg-[#007acc] text-white text-xs font-bold"
-                >
-                  Save Changes
-                </button>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setEditingLevel(null)} className="px-4 py-2 rounded text-xs font-bold bg-gray-300 dark:bg-gray-700">Cancel</button>
+                <button type="submit" className="px-4 py-2 rounded text-xs font-bold bg-[#007acc] text-white">Save Changes</button>
               </div>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* LEADERBOARD PLAYER STATS MODAL */}
-      {selectedPlayer && (
-        <div
-          className="fixed inset-0 bg-black/75 flex items-center justify-center p-4 z-50"
-          onClick={() => setSelectedPlayer(null)}
-        >
-          <div
-            className={`max-w-lg w-full p-6 rounded-lg border shadow-xl space-y-4 max-h-[90vh] overflow-y-auto ${cardClass}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center border-b pb-3">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src={`https://flagcdn.com/w20/${selectedPlayer.country.toLowerCase()}.png`}
-                  alt={selectedPlayer.country}
-                  className="w-6 h-4 object-cover border border-gray-300"
-                />
-                <div>
-                  <h2 className="text-xl font-bold">{selectedPlayer.display_name}</h2>
-                  <p className="text-xs text-gray-400">@{selectedPlayer.username}</p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedPlayer(null)} className="text-gray-400 hover:text-rose-500 font-bold text-xl">
-                ✕
-              </button>
-            </div>
-
-            {/* Social Links */}
-            {(selectedPlayer.youtube || selectedPlayer.discord || selectedPlayer.twitter) && (
-              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                {selectedPlayer.youtube && <span className="px-2 py-1 rounded bg-black/5 dark:bg-white/5">YouTube: <strong>{selectedPlayer.youtube}</strong></span>}
-                {selectedPlayer.discord && <span className="px-2 py-1 rounded bg-black/5 dark:bg-white/5">Discord: <strong>{selectedPlayer.discord}</strong></span>}
-                {selectedPlayer.twitter && <span className="px-2 py-1 rounded bg-black/5 dark:bg-white/5">X: <strong>{selectedPlayer.twitter}</strong></span>}
-              </div>
-            )}
-
-            {/* Summary Stat Boxes */}
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="p-3 rounded border border-gray-200 dark:border-gray-700">
-                <p className="text-[11px] uppercase font-bold text-gray-400">Total Points</p>
-                <p className="text-xl font-black text-[#007acc]">{selectedPlayer.totalPoints.toFixed(2)}</p>
-              </div>
-              <div className="p-3 rounded border border-gray-200 dark:border-gray-700">
-                <p className="text-[11px] uppercase font-bold text-gray-400">Levels Beaten / Verified</p>
-                <p className="text-xl font-black">{selectedPlayer.completedCount}</p>
-              </div>
-            </div>
-
-            {/* Hardest Level */}
-            <div className="p-3 rounded border border-gray-200 dark:border-gray-700">
-              <p className="text-[11px] uppercase font-bold text-gray-400">Hardest Completion</p>
-              {selectedPlayer.hardestLevel ? (
-                <p className="font-bold text-sm text-amber-500 mt-0.5">
-                  {selectedPlayer.hardestLevel.title} ({Number(selectedPlayer.hardestLevel.points || 0).toFixed(2)} pts)
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500 mt-0.5">No 100% completions yet.</p>
-              )}
-            </div>
-
-            {/* Completed & Verified Levels List */}
-            <div>
-              <p className="text-xs font-bold uppercase text-gray-400 mb-2">
-                Levels Breakdown ({selectedPlayer.entries.length})
-              </p>
-              {selectedPlayer.entries.length === 0 ? (
-                <p className="text-xs text-gray-500">No approved records or verifications yet.</p>
-              ) : (
-                <div className="max-h-48 overflow-y-auto space-y-1.5">
-                  {selectedPlayer.entries.map((entry, i) => (
-                    <div
-                      key={i}
-                      className="text-xs px-3 py-2 rounded border border-gray-200 dark:border-gray-700 flex justify-between items-center"
-                    >
-                      <div className="flex items-center gap-2">
-                        {entry.videoUrl ? (
-                          <a href={entry.videoUrl} target="_blank" rel="noreferrer" className="font-bold text-[#007acc] hover:underline">
-                            {entry.level.title}
-                          </a>
-                        ) : (
-                          <span className="font-bold">{entry.level.title}</span>
-                        )}
-                        {entry.role === 'Verifier' && (
-                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800">
-                            Verifier
-                          </span>
-                        )}
-                        {entry.role === 'Progress' && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-800">
-                            {entry.progress}%
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-mono font-semibold text-gray-500">
-                        +{entry.pointsEarned.toFixed(2)} pts
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   )
 }
+
+```
