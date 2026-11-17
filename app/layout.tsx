@@ -3,9 +3,11 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Goofy Levels List (GLL)',
-  description: 'The official Custom Geometry Dash List about Goofy Levels!',
+  description: 'The official list website of Geometry Dash Goofy levels and platformers.',
   icons: {
-    icon: '/favicon.ico', // You can replace public/favicon.ico with your custom icon file!
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
   },
 }
 
