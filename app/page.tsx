@@ -780,12 +780,9 @@ export default function Home() {
               <div>
                 <label className="block text-xs font-semibold mb-1">Country</label>
                 <select value={regCountry} onChange={(e) => setRegCountry(e.target.value)} className={inputClass}>
-                  <option value="pl">Poland</option>
-                  <option value="us">United States</option>
-                  <option value="gb">United Kingdom</option>
-                  <option value="de">Germany</option>
-                  <option value="es">Spain</option>
-                  <option value="fr">France</option>
+{COUNTRIES.map((c) => (
+  <option key={c.code} value={c.code}>{c.name}</option>
+))}
                 </select>
               </div>
               <div>
@@ -889,12 +886,9 @@ export default function Home() {
                 <div>
                   <label className="block text-xs font-semibold mb-1">Country</label>
                   <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
-                    <option value="pl">Poland</option>
-                    <option value="us">United States</option>
-                    <option value="gb">United Kingdom</option>
-                    <option value="de">Germany</option>
-                    <option value="es">Spain</option>
-                    <option value="fr">France</option>
+{COUNTRIES.map((c) => (
+  <option key={c.code} value={c.code}>{c.name}</option>
+))}
                   </select>
                 </div>
                 <div className="pt-2 border-t">
@@ -1100,11 +1094,9 @@ export default function Home() {
                 <input type="text" placeholder="Clan" value={modClan} onChange={(e) => setModClan(e.target.value)} className={`sm:col-span-2 ${inputClass}`} />
                 <input required type="text" placeholder="Username *" value={modName} onChange={(e) => setModName(e.target.value)} className={`sm:col-span-4 ${inputClass}`} />
                 <select value={modCountry} onChange={(e) => setModCountry(e.target.value)} className={`sm:col-span-2 ${inputClass}`}>
-                  <option value="pl">Poland (PL)</option>
-                  <option value="us">USA (US)</option>
-                  <option value="gb">UK (GB)</option>
-                  <option value="de">Germany (DE)</option>
-                  <option value="es">Spain (ES)</option>
+{COUNTRIES.map((c) => (
+  <option key={c.code} value={c.code}>{c.name} ({c.code.toUpperCase()})</option>
+))}
                 </select>
                 <select value={modRole} onChange={(e) => setModRole(e.target.value as 'editor' | 'helper')} className={`sm:col-span-2 ${inputClass}`}>
                   <option value="editor">List Editor</option>
