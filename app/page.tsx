@@ -533,6 +533,65 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
+  // MODERATOR: APPROVE/REJECT SUBMISSION
+  async function handleReviewSubmission(subId: number, status: 'approved' | 'rejected') {
+    if (!isMod) return
+    const { error } = await supabase.from('submissions').update({ status }).eq('id', subId)
+    if (error) {
+      alert('Error updating submission: ' + error.message)
+    } else {
+      refreshAll()
+      showNotice(`Submission ${status}!`)
+    }
+  }
+
+  // MODERATOR: APPROVE/REJECT LEVEL
+  async function handleReviewLevel(lvlId: number, status: 'approved' | 'rejected') {
+    if (!isMod) return
+    if (status === 'rejected') {
+      await supabase.from('demons').delete().eq('id', lvlId)
+      showNotice('Level rejected and removed.')
+    } else {
+      await supabase.from('demons').update({ status: 'approved' }).eq('id', lvlId)
+      showNotice('Level approved to the list!')
+    }
+    refreshAll()
+  }
+
+  // MODERATOR: MANAGE STAFF LIST
+  async function handleAddStaff(e: React.FormEvent) {
+    e.preventDefault()
+    if (!isMod || !modName.trim()) return
+
+    const { error } = await supabase.from('moderators').insert([
+      {
+        name: modName.trim(),
+        clan: modClan.trim(),
+        country_code: modCountry,
+        role: modRole,
+      },
+    ])
+
+    if (error) {
+      alert('Error adding staff: ' + error.message)
+    } else {
+      setModName('')
+      setModClan('')
+      refreshAll()
+      showNotice('Staff member added successfully!')
+    }
+  }
+
+  async function handleRemoveStaff(staffId: number) {
+    if (!isMod) return
+    if (!confirm('Are you sure you want to remove this staff member?')) return
+    const { error } = await supabase.from('moderators').delete().eq('id', staffId)
+    if (!error) {
+      refreshAll()
+      showNotice('Staff member removed.')
+    }
+  }
+
   // LEADERBOARD CALCULATION
   const approvedLevels = levels.filter((l) => (l.status || 'approved') === 'approved')
   const pendingLevels = levels.filter((l) => l.status === 'pending')
@@ -805,7 +864,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* PROFILE TAB (WITH EDIT DISPLAY NAME) */}
+        {/* PROFILE TAB */}
         {activeTab === 'profile' && currentUser && (
           <div className={`max-w-2xl mx-auto p-6 rounded border shadow space-y-6 ${cardClass}`}>
             <div className="flex items-center justify-between border-b pb-4">
@@ -823,7 +882,6 @@ export default function Home() {
               {isMod && <span className="bg-amber-500 text-white text-xs px-2 py-1 rounded font-bold">Staff / Mod</span>}
             </div>
 
-            {/* Warning notices if any */}
             {(currentUser.warnings?.length || 0) > 0 && (
               <div className="bg-rose-50 border border-rose-200 text-rose-900 p-4 rounded text-xs space-y-1">
                 <p className="font-bold">Moderator Warnings ({currentUser.warnings.length}):</p>
@@ -835,7 +893,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Profile Editor Form */}
             <form onSubmit={handleProfileSave} className="space-y-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#007acc]">Edit Profile Settings</h3>
               
@@ -892,6 +949,210 @@ export default function Home() {
           </div>
         )}
 
+        {/* LEADERBOARD TAB */}
+        {activeTab === 'leaderboard' && (
+          <div className={`max-w-3xl mx-auto p-6 rounded border shadow space-y-4 ${cardClass}`}>
+            <h2 className="text-2xl font-bold border-b pb-2">Goofy Levels Leaderboard</h2>
+            <p className="text-xs text-gray-500">
+              Click on any player account to view their stats, completions, and verifications.
+            </p>
+            {leaderboard.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4">No registered players on the leaderboard yet.</p>
+            ) : (
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {leaderboard.map((player, idx) => (
+                  <button
+                    key={player.id}
+                    type="button"
+                    onClick={() => setSelectedPlayer(player)}
+                    className="w-full text-left py-3 px-2 rounded hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-base w-8 text-gray-400">#{idx + 1}</span>
+                      <img
+                        src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`}
+                        alt={player.country}
+                        className="w-5 h-3.5 object-cover border border-gray-300"
+                      />
+                      <div>
+                        <p className="font-bold text-sm hover:text-[#007acc] transition">{player.display_name}</p>
+                        <div className="flex gap-3 text-[11px] text-gray-400">
+                          {player.youtube && <span>YT: {player.youtube}</span>}
+                          {player.discord && <span>Discord: {player.discord}</span>}
+                          {player.twitter && <span>X: {player.twitter}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm text-[#007acc]">{player.totalPoints.toFixed(2)} pts</p>
+                      <p className="text-[11px] text-gray-400">{player.completedCount} levels</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ROULETTE TAB */}
+        {activeTab === 'roulette' && (
+          <div className={`max-w-md mx-auto p-6 rounded border shadow text-center space-y-6 ${cardClass}`}>
+            <h2 className="text-2xl font-bold border-b pb-2">Demon Roulette</h2>
+            {rouletteLevel ? (
+              <div className="space-y-4">
+                <a href={rouletteLevel.verification_url || '#'} target="_blank" rel="noreferrer">
+                  <img
+                    src={rouletteLevel.thumbnail || getYouTubeThumbnail(rouletteLevel.verification_url, rouletteLevel.title)}
+                    alt={rouletteLevel.title}
+                    className="w-full h-44 object-cover rounded border border-gray-300 hover:opacity-95 transition"
+                  />
+                </a>
+                <div>
+                  <h3 className="text-xl font-bold">{rouletteLevel.title}</h3>
+                  <p className="text-xs text-gray-400">By {rouletteLevel.creator} • Verified by {rouletteLevel.verifier || 'Unknown'}</p>
+                  <p className="text-sm font-bold text-[#007acc] mt-1">{Number(rouletteLevel.points || 0).toFixed(2)} Points ({rouletteLevel.mode || 'classic'})</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No levels available for roulette.</p>
+            )}
+            <button
+              onClick={spinRoulette}
+              className="w-full bg-[#007acc] text-white font-bold py-2.5 rounded text-sm hover:bg-[#005fa3] transition"
+            >
+              Spin Another Level!
+            </button>
+          </div>
+        )}
+
+        {/* MOD PANEL TAB */}
+        {activeTab === 'mod' && isMod && (
+          <div className={`max-w-4xl mx-auto p-6 rounded border shadow space-y-6 ${cardClass}`}>
+            <h2 className="text-2xl font-bold border-b pb-2 text-amber-600">Moderator Control Panel</h2>
+
+            {/* Pending Level Submissions */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-amber-600">Pending Level Approvals ({pendingLevels.length})</h3>
+              {pendingLevels.length === 0 ? (
+                <p className="text-xs text-gray-400">No pending level submissions right now.</p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingLevels.map((lvl) => (
+                    <div key={lvl.id} className="p-3 bg-black/5 dark:bg-white/5 rounded flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <p className="font-bold text-sm">{lvl.title} <span className="text-gray-400 font-normal">by {lvl.creator}</span></p>
+                        <p className="text-gray-400">Points: {lvl.points} | Mode: {lvl.mode || 'classic'} | Submitted by: @{lvl.submitted_by}</p>
+                        {lvl.verification_url && (
+                          <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="text-[#007acc] underline">Watch Proof</a>
+                        )}
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-emerald-600 text-white px-3 py-1.5 rounded font-bold">Approve</button>
+                        <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-rose-600 text-white px-3 py-1.5 rounded font-bold">Reject</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pending Record Submissions */}
+            <div className="space-y-3 border-t pt-4">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-amber-600">Pending Record Submissions ({pendingSubs.length})</h3>
+              {pendingSubs.length === 0 ? (
+                <p className="text-xs text-gray-400">No pending record submissions right now.</p>
+              ) : (
+                <div className="space-y-2">
+                  {pendingSubs.map((sub) => (
+                    <div key={sub.id} className="p-3 bg-black/5 dark:bg-white/5 rounded flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <p className="font-bold text-sm">{sub.player_name} (@{sub.player_username}) — {sub.progress}% on {sub.level_title}</p>
+                        <p className="text-gray-400">Enjoyment: {sub.enjoyment}/10 | Notes: {sub.mod_notes || 'None'}</p>
+                        <a href={sub.video_url} target="_blank" rel="noreferrer" className="text-[#007acc] underline">Watch Video Proof</a>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-emerald-600 text-white px-3 py-1.5 rounded font-bold">Approve</button>
+                        <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-rose-600 text-white px-3 py-1.5 rounded font-bold">Reject</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Issue Warning */}
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-rose-600">Issue User Warning</h3>
+              <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="Username (e.g. player123)"
+                  value={warnTargetUser}
+                  onChange={(e) => setWarnTargetUser(e.target.value)}
+                  className={inputClass}
+                />
+                <input
+                  type="text"
+                  placeholder="Reason for warning"
+                  value={warnReason}
+                  onChange={(e) => setWarnReason(e.target.value)}
+                  className={inputClass}
+                />
+                <button type="submit" className="bg-rose-600 text-white font-bold text-xs rounded py-2">
+                  Issue Warning
+                </button>
+              </form>
+            </div>
+
+            {/* Manage Sidebar Staff */}
+            <div className="border-t pt-4 space-y-3">
+              <h3 className="font-bold text-sm uppercase tracking-wider text-amber-600">Manage Sidebar Staff Section</h3>
+              <form onSubmit={handleAddStaff} className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+                <input
+                  type="text"
+                  placeholder="Staff Name"
+                  value={modName}
+                  onChange={(e) => setModName(e.target.value)}
+                  className={`sm:col-span-2 ${inputClass}`}
+                />
+                <input
+                  type="text"
+                  placeholder="Clan / Org (optional)"
+                  value={modClan}
+                  onChange={(e) => setModClan(e.target.value)}
+                  className={inputClass}
+                />
+                <select value={modCountry} onChange={(e) => setModCountry(e.target.value)} className={`sm:col-span-2 ${inputClass}`}>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name} ({c.code.toUpperCase()})</option>
+                  ))}
+                </select>
+                <select value={modRole} onChange={(e) => setModRole(e.target.value as any)} className={inputClass}>
+                  <option value="editor">Editor</option>
+                  <option value="helper">Helper</option>
+                </select>
+                <button type="submit" className="sm:col-span-6 bg-amber-600 text-white font-bold text-xs py-2 rounded">
+                  + Add Staff Member
+                </button>
+              </form>
+
+              <div className="space-y-1 pt-2">
+                {moderators.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-3 py-2 rounded text-xs">
+                    <div className="flex items-center gap-2">
+                      <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt={m.country_code} className="w-4 h-3 border" />
+                      <span className="font-bold">{m.name}</span>
+                      {m.clan && <span className="text-gray-400">[{m.clan}]</span>}
+                      <span className="bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">{m.role}</span>
+                    </div>
+                    <button onClick={() => handleRemoveStaff(m.id)} className="text-rose-600 font-bold hover:underline">Remove</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* CLASSIC / PLATFORMER LEVEL LIST VIEW */}
         {(activeTab === 'classic' || activeTab === 'platformer') && (
           <div className="space-y-6">
@@ -930,7 +1191,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* SUBMIT RECORD / LEVEL DRAWER */}
+            {/* SUBMIT RECORD DRAWER */}
             {sidebarForm === 'record' && currentUser && (
               <form onSubmit={handleRecordSubmit} className={`p-4 rounded border shadow space-y-3 ${cardClass}`}>
                 <h3 className="font-bold text-sm uppercase text-[#007acc]">Submit Record / Completion</h3>
@@ -977,6 +1238,7 @@ export default function Home() {
               </form>
             )}
 
+            {/* SUBMIT LEVEL DRAWER */}
             {sidebarForm === 'level' && currentUser && (
               <form onSubmit={handleLevelSubmit} className={`p-4 rounded border shadow space-y-3 ${cardClass}`}>
                 <h3 className="font-bold text-sm uppercase text-emerald-600">Submit New Goofy Level</h3>
@@ -1157,7 +1419,6 @@ export default function Home() {
                 />
               </div>
 
-              {/* Manage Victors inside modal */}
               <div className="border-t pt-3 space-y-2">
                 <label className="block text-xs font-bold uppercase text-[#007acc]">Manage Victors ({editingLevel.victors?.length || 0})</label>
                 <div className="max-h-32 overflow-y-auto space-y-1">
@@ -1194,6 +1455,67 @@ export default function Home() {
                 <button type="submit" className="px-4 py-2 rounded text-xs font-bold bg-[#007acc] text-white">Save Changes</button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* PLAYER STATS MODAL (FROM LEADERBOARD) */}
+        {selectedPlayer && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className={`max-w-lg w-full p-6 rounded border shadow space-y-4 ${cardClass}`}>
+              <div className="flex justify-between items-center border-b pb-2">
+                <div className="flex items-center gap-2">
+                  <img src={`https://flagcdn.com/w20/${selectedPlayer.country.toLowerCase()}.png`} alt={selectedPlayer.country} className="w-5 h-3.5 border" />
+                  <h3 className="text-lg font-bold">{selectedPlayer.display_name}</h3>
+                </div>
+                <button onClick={() => setSelectedPlayer(null)} className="font-bold text-gray-400 hover:text-gray-200">X</button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center bg-black/5 dark:bg-white/5 p-3 rounded">
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold">Total Points</p>
+                  <p className="text-base font-black text-[#007acc]">{selectedPlayer.totalPoints.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold">Completions</p>
+                  <p className="text-base font-black">{selectedPlayer.completedCount}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold">Hardest</p>
+                  <p className="text-xs font-bold truncate">{selectedPlayer.hardestLevel ? selectedPlayer.hardestLevel.title : 'None'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase text-gray-400">Completed Levels & Verifications</h4>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {selectedPlayer.entries.length === 0 ? (
+                    <p className="text-xs text-gray-500 py-2">No completed levels or verifications recorded yet.</p>
+                  ) : (
+                    selectedPlayer.entries.map((entry, i) => (
+                      <div key={i} className="flex items-center justify-between bg-black/5 dark:bg-white/5 p-2 rounded text-xs">
+                        <div>
+                          <p className="font-bold">{entry.level.title}</p>
+                          <p className="text-[10px] text-gray-400">
+                            {entry.role} {entry.progress < 100 ? `(${entry.progress}%)` : ''} • +{entry.pointsEarned.toFixed(2)} pts
+                          </p>
+                        </div>
+                        {entry.videoUrl && (
+                          <a href={entry.videoUrl} target="_blank" rel="noreferrer" className="text-[#007acc] underline text-[11px] font-semibold">
+                            Video Proof
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button onClick={() => setSelectedPlayer(null)} className="px-4 py-2 rounded text-xs font-bold bg-[#007acc] text-white">
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
