@@ -108,6 +108,7 @@ interface Profile {
   discord: string
   twitter: string
   warnings: string[]
+  inventory?: number[] // Level IDs stored from Gacha
 }
 
 interface Moderator {
@@ -148,7 +149,7 @@ export default function Home() {
   const [moderators, setModerators] = useState<Moderator[]>([])
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
-  const [activeTab, setActiveTab] = useState<'classic' | 'platformer' | 'leaderboard' | 'roulette' | 'profile' | 'mod' | 'login' | 'register'>('classic')
+  const [activeTab, setActiveTab] = useState<'classic' | 'platformer' | 'leaderboard' | 'roulette' | 'gacha' | 'profile' | 'mod' | 'login' | 'register'>('classic')
   const [sidebarForm, setSidebarForm] = useState<'none' | 'record' | 'level'>('none')
   const [search, setSearch] = useState('')
   const [darkMode, setDarkMode] = useState(false)
@@ -207,8 +208,15 @@ export default function Home() {
   // Leaderboard Player Stats Modal state
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerLeaderboardRow | null>(null)
 
-  // Roulette state
+  // Roulette Challenge states
   const [rouletteLevel, setRouletteLevel] = useState<GoofyLevel | null>(null)
+  const [rouletteTargetPct, setRouletteTargetPct] = useState<number>(1)
+  const [rouletteRolledPct, setRouletteRolledPct] = useState<number | null>(null)
+  const [rouletteMessage, setRouletteMessage] = useState<string>('')
+
+  // Gacha states
+  const [gachaRolledLevel, setGachaRolledLevel] = useState<GoofyLevel | null>(null)
+  const [gachaAnimating, setGachaAnimating] = useState(false)
 
   const isMod = currentUser ? ALLOWED_MODS.includes(currentUser.username.toLowerCase()) : false
 
@@ -280,6 +288,7 @@ export default function Home() {
           country: regCountry,
           email: regEmail.trim(),
           warnings: [],
+          inventory: [],
         },
       ])
     }
@@ -533,16 +542,33 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  // MODERATOR: APPROVE/REJECT SUBMISSION
+  // MODERATOR: APPROVE/REJECT SUBMISSION (AUTOMATICALLY ADDS VICTOR ON 100%)
   async function handleReviewSubmission(subId: number, status: 'approved' | 'rejected') {
     if (!isMod) return
+    const sub = submissions.find((s) => s.id === subId)
+    if (!sub) return
+
     const { error } = await supabase.from('submissions').update({ status }).eq('id', subId)
     if (error) {
       alert('Error updating submission: ' + error.message)
-    } else {
-      refreshAll()
-      showNotice(`Submission ${status}!`)
+      return
     }
+
+    // If approved and progress is 100%, automatically add victor to the level!
+    if (status === 'approved' && sub.progress === 100) {
+      const targetLevel = levels.find((l) => l.id === sub.level_id)
+      if (targetLevel) {
+        const existingVictors = targetLevel.victors || []
+        const alreadyExists = existingVictors.some((v) => v.username.toLowerCase() === sub.player_username.toLowerCase())
+        if (!alreadyExists) {
+          const updatedVictors = [...existingVictors, { username: sub.player_username, video_url: sub.video_url }]
+          await supabase.from('demons').update({ victors: updatedVictors }).eq('id', targetLevel.id)
+        }
+      }
+    }
+
+    refreshAll()
+    showNotice(`Submission ${status}!`)
   }
 
   // MODERATOR: APPROVE/REJECT LEVEL
@@ -590,6 +616,54 @@ export default function Home() {
       refreshAll()
       showNotice('Staff member removed.')
     }
+  }
+
+  // ROULETTE CHALLENGE LOGIC
+  function startRouletteChallenge() {
+    if (approvedLevels.length === 0) return
+    const randomLvl = approvedLevels[Math.floor(Math.random() * approvedLevels.length)]
+    setRouletteLevel(randomLvl)
+    setRouletteTargetPct(1)
+    setRouletteRolledPct(null)
+    setRouletteMessage('Spin to get your required percentage!')
+    setActiveTab('roulette')
+  }
+
+  function spinRouletteProgress() {
+    const rolled = Math.floor(Math.random() * 100) + 1
+    setRouletteRolledPct(rolled)
+    if (rolled >= rouletteTargetPct) {
+      const nextTarget = Math.min(100, rolled + 1)
+      setRouletteTargetPct(nextTarget)
+      setRouletteMessage(`Success! You rolled ${rolled}%. Next round requires at least ${nextTarget}%. Click spin again!`)
+    } else {
+      setRouletteMessage(`Failed! You rolled ${rolled}%, but needed at least ${rouletteTargetPct}%. Challenge Over!`)
+    }
+  }
+
+  // GACHA LOGIC
+  async function spinGacha() {
+    if (approvedLevels.length === 0) return
+    if (!currentUser) {
+      alert('Please log in to use the Level Gacha and save to your inventory!')
+      setActiveTab('login')
+      return
+    }
+
+    setGachaAnimating(true)
+    setTimeout(async () => {
+      const randomLvl = approvedLevels[Math.floor(Math.random() * approvedLevels.length)]
+      setGachaRolledLevel(randomLvl)
+      setGachaAnimating(false)
+
+      const currentInv = currentUser.inventory || []
+      if (!currentInv.includes(randomLvl.id)) {
+        const newInv = [...currentInv, randomLvl.id]
+        await supabase.from('profiles').update({ inventory: newInv }).eq('id', currentUser.id)
+        setCurrentUser({ ...currentUser, inventory: newInv })
+        refreshAll()
+      }
+    }, 1000)
   }
 
   // LEADERBOARD CALCULATION
@@ -670,13 +744,6 @@ export default function Home() {
       }
     })
     .sort((a, b) => b.totalPoints - a.totalPoints)
-
-  function spinRoulette() {
-    if (approvedLevels.length > 0) {
-      setRouletteLevel(approvedLevels[Math.floor(Math.random() * approvedLevels.length)])
-    }
-    setActiveTab('roulette')
-  }
 
   const cardClass = darkMode ? 'bg-[#2b2d31] border-gray-700 text-gray-100' : 'bg-white border-gray-200 text-[#2c2f33]'
   const inputClass = darkMode
@@ -764,10 +831,16 @@ export default function Home() {
               Leaderboard
             </button>
             <button
-              onClick={spinRoulette}
+              onClick={startRouletteChallenge}
               className={`px-5 py-2.5 border-b-2 ${activeTab === 'roulette' ? 'border-[#007acc] text-[#007acc]' : 'border-transparent'}`}
             >
               Roulette
+            </button>
+            <button
+              onClick={() => setActiveTab('gacha')}
+              className={`px-5 py-2.5 border-b-2 ${activeTab === 'gacha' ? 'border-amber-500 text-amber-600' : 'border-transparent'}`}
+            >
+              Level Gacha 🎁
             </button>
             {currentUser && (
               <button
@@ -864,7 +937,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* PROFILE TAB */}
+        {/* PROFILE TAB (WITH INVENTORY) */}
         {activeTab === 'profile' && currentUser && (
           <div className={`max-w-2xl mx-auto p-6 rounded border shadow space-y-6 ${cardClass}`}>
             <div className="flex items-center justify-between border-b pb-4">
@@ -892,6 +965,30 @@ export default function Home() {
                 </ul>
               </div>
             )}
+
+            {/* Inventory Section */}
+            <div className="space-y-3 border-b pb-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-amber-600">My Gacha Inventory ({currentUser.inventory?.length || 0} levels)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                {(!currentUser.inventory || currentUser.inventory.length === 0) ? (
+                  <p className="text-xs text-gray-400">Your gacha inventory is empty! Roll levels in the Level Gacha tab.</p>
+                ) : (
+                  currentUser.inventory.map((lvlId) => {
+                    const invLvl = levels.find((l) => l.id === lvlId)
+                    if (!invLvl) return null
+                    return (
+                      <div key={lvlId} className="flex items-center gap-3 bg-black/5 dark:bg-white/5 p-2 rounded text-xs">
+                        <img src={invLvl.thumbnail || getYouTubeThumbnail(invLvl.verification_url, invLvl.title)} alt="" className="w-12 h-8 object-cover rounded border" />
+                        <div>
+                          <p className="font-bold">{invLvl.title}</p>
+                          <p className="text-[10px] text-gray-400">{invLvl.points} pts • {invLvl.mode || 'classic'}</p>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
 
             <form onSubmit={handleProfileSave} className="space-y-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#007acc]">Edit Profile Settings</h3>
@@ -994,10 +1091,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* ROULETTE TAB */}
+        {/* ROULETTE CHALLENGE TAB */}
         {activeTab === 'roulette' && (
           <div className={`max-w-md mx-auto p-6 rounded border shadow text-center space-y-6 ${cardClass}`}>
-            <h2 className="text-2xl font-bold border-b pb-2">Demon Roulette</h2>
+            <h2 className="text-2xl font-bold border-b pb-2">Demon Roulette Challenge</h2>
             {rouletteLevel ? (
               <div className="space-y-4">
                 <a href={rouletteLevel.verification_url || '#'} target="_blank" rel="noreferrer">
@@ -1012,15 +1109,65 @@ export default function Home() {
                   <p className="text-xs text-gray-400">By {rouletteLevel.creator} • Verified by {rouletteLevel.verifier || 'Unknown'}</p>
                   <p className="text-sm font-bold text-[#007acc] mt-1">{Number(rouletteLevel.points || 0).toFixed(2)} Points ({rouletteLevel.mode || 'classic'})</p>
                 </div>
+
+                <div className="bg-black/5 dark:bg-white/5 p-4 rounded space-y-2">
+                  <p className="text-sm font-bold text-amber-500">Required Target: At least {rouletteTargetPct}%</p>
+                  {rouletteRolledPct !== null && (
+                    <p className="text-xs font-semibold">You rolled: {rouletteRolledPct}%</p>
+                  )}
+                  <p className="text-xs text-gray-400">{rouletteMessage}</p>
+                </div>
               </div>
             ) : (
               <p className="text-sm text-gray-500">No levels available for roulette.</p>
             )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={spinRouletteProgress}
+                className="flex-1 bg-[#007acc] text-white font-bold py-2.5 rounded text-sm hover:bg-[#005fa3] transition"
+              >
+                Roll Percentage (%)
+              </button>
+              <button
+                onClick={startRouletteChallenge}
+                className="bg-gray-500 text-white font-bold py-2.5 px-4 rounded text-sm hover:bg-gray-600 transition"
+              >
+                New Level
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* GACHA TAB */}
+        {activeTab === 'gacha' && (
+          <div className={`max-w-md mx-auto p-6 rounded border shadow text-center space-y-6 ${cardClass}`}>
+            <h2 className="text-2xl font-bold border-b pb-2 text-amber-500">🎁 Goofy Level Gacha</h2>
+            <p className="text-xs text-gray-400">Roll the gacha machine to collect random levels into your personal profile inventory!</p>
+
+            <div className="p-6 bg-black/5 dark:bg-white/5 rounded flex flex-col items-center justify-center min-h-[180px]">
+              {gachaAnimating ? (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+              ) : gachaRolledLevel ? (
+                <div className="space-y-3">
+                  <img src={gachaRolledLevel.thumbnail || getYouTubeThumbnail(gachaRolledLevel.verification_url, gachaRolledLevel.title)} alt="" className="w-48 h-28 object-cover rounded border mx-auto" />
+                  <div>
+                    <h3 className="font-bold text-base">{gachaRolledLevel.title}</h3>
+                    <p className="text-xs text-gray-400">By {gachaRolledLevel.creator}</p>
+                    <span className="inline-block mt-1 bg-amber-500/20 text-amber-600 text-xs px-2 py-0.5 rounded font-bold">+ Added to Inventory!</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Ready to roll your first level?</p>
+              )}
+            </div>
+
             <button
-              onClick={spinRoulette}
-              className="w-full bg-[#007acc] text-white font-bold py-2.5 rounded text-sm hover:bg-[#005fa3] transition"
+              onClick={spinGacha}
+              disabled={gachaAnimating}
+              className="w-full bg-amber-600 text-white font-bold py-3 rounded text-sm hover:bg-amber-700 transition disabled:opacity-50"
             >
-              Spin Another Level!
+              {gachaAnimating ? 'Rolling...' : 'Roll Level (Gacha) 🎰'}
             </button>
           </div>
         )}
@@ -1071,7 +1218,7 @@ export default function Home() {
                         <a href={sub.video_url} target="_blank" rel="noreferrer" className="text-[#007acc] underline">Watch Video Proof</a>
                       </div>
                       <div className="flex gap-2 shrink-0">
-                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-emerald-600 text-white px-3 py-1.5 rounded font-bold">Approve</button>
+                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-emerald-600 text-white px-3 py-1.5 rounded font-bold">Approve {sub.progress === 100 && '(Auto-adds Victor)'}</button>
                         <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-rose-600 text-white px-3 py-1.5 rounded font-bold">Reject</button>
                       </div>
                     </div>
@@ -1458,7 +1605,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* PLAYER STATS MODAL (FROM LEADERBOARD) */}
+        {/* PLAYER STATS MODAL */}
         {selectedPlayer && (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
             <div className={`max-w-lg w-full p-6 rounded border shadow space-y-4 ${cardClass}`}>
