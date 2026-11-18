@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'dhavvin_09', 'lopikpl']
-const DISCORD_INVITE_URL = 'https://discord.gg/ePfDysKQxM'
+const DISCORD_INVITE_URL = 'https://discord.gg/YOUR_DISCORD_INVITE'
 
 const COUNTRIES = [
   { code: 'pl', name: 'Poland', region: 'Europe' },
@@ -317,7 +317,6 @@ export default function Home() {
     setTimeout(() => setBannerMsg(''), 6000)
   }
 
-  // PERSISTENT THEME & SIDE DECORATION TOGGLES
   async function handleToggleTheme() {
     const nextDark = !darkMode
     setDarkMode(nextDark)
@@ -338,7 +337,7 @@ export default function Home() {
     }
   }
 
-  // AUTH: REGISTER
+  // AUTH: REGISTER (Auto-signs in immediately without email confirmation requirement)
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
     const cleanUser = regUsername.trim().toLowerCase()
@@ -368,12 +367,24 @@ export default function Home() {
           side_decor: sideDecor,
         },
       ])
+
+      const { data: loginData } = await supabase.auth.signInWithPassword({
+        email: regEmail.trim(),
+        password: regPass,
+      })
+      if (loginData.user) {
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', loginData.user.id).single()
+        if (prof) {
+          setCurrentUser(prof)
+          syncProfileEditor(prof)
+        }
+      }
     }
 
-    await supabase.auth.signOut()
     setRegPass('')
-    setActiveTab('login')
-    showNotice('Account registered. Log in now with your email and password.')
+    setActiveTab('classic')
+    refreshAll()
+    showNotice('Account registered and logged in successfully.')
   }
 
   // AUTH: LOGIN
@@ -409,7 +420,6 @@ export default function Home() {
     setActiveTab('classic')
   }
 
-  // SUBMIT RECORD
   async function handleRecordSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) {
@@ -449,7 +459,6 @@ export default function Home() {
     }
   }
 
-  // SUBMIT NEW LEVEL
   async function handleLevelSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) {
@@ -490,7 +499,6 @@ export default function Home() {
     }
   }
 
-  // FORUM & BUG REPORT SUBMISSION
   async function handleCreateForumPost(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) {
@@ -527,7 +535,6 @@ export default function Home() {
     showNotice('Post removed.')
   }
 
-  // MOD: DELETE LEVEL
   async function handleDeleteLevel(levelId: number, title: string) {
     if (!isMod) return
     if (!confirm(`Are you sure you want to delete "${title}"?`)) return
@@ -541,7 +548,6 @@ export default function Home() {
     }
   }
 
-  // MOD: SAVE EDITED LEVEL
   async function handleSaveEditedLevel(e: React.FormEvent) {
     e.preventDefault()
     if (!isMod || !editingLevel) return
@@ -594,7 +600,6 @@ export default function Home() {
     setEditingLevel({ ...editingLevel, victors: nextVictors })
   }
 
-  // UPDATE PROFILE
   async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) return
@@ -644,7 +649,6 @@ export default function Home() {
     }
   }
 
-  // MODERATOR: ISSUE WARNING
   async function handleIssueWarning(e: React.FormEvent) {
     e.preventDefault()
     if (!isMod || !warnTargetUser.trim() || !warnReason.trim()) return
@@ -663,7 +667,6 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  // MODERATOR: APPROVE/REJECT SUBMISSION (AUTOMATICALLY ADDS VICTOR + ENJOYMENT ON 100%)
   async function handleReviewSubmission(subId: number, status: 'approved' | 'rejected') {
     if (!isMod) return
     const sub = submissions.find((s) => s.id === subId)
@@ -698,7 +701,6 @@ export default function Home() {
     showNotice(`Submission ${status}.`)
   }
 
-  // MODERATOR: APPROVE/REJECT LEVEL
   async function handleReviewLevel(lvlId: number, status: 'approved' | 'rejected') {
     if (!isMod) return
     if (status === 'rejected') {
@@ -711,7 +713,6 @@ export default function Home() {
     refreshAll()
   }
 
-  // MODERATOR: MANAGE STAFF LIST
   async function handleAddStaff(e: React.FormEvent) {
     e.preventDefault()
     if (!isMod || !modName.trim()) return
@@ -745,7 +746,6 @@ export default function Home() {
     }
   }
 
-  // ROULETTE CHALLENGE LOGIC
   function startRouletteChallenge() {
     if (approvedLevels.length === 0) return
     const randomLvl = approvedLevels[Math.floor(Math.random() * approvedLevels.length)]
@@ -768,7 +768,6 @@ export default function Home() {
     }
   }
 
-  // GACHA WITH COOLDOWN & PERSISTENT INVENTORY
   async function spinGacha() {
     if (approvedLevels.length === 0) return
     if (!currentUser) {
@@ -806,12 +805,12 @@ export default function Home() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
 
-  // LEADERBOARD CALCULATION
   const approvedLevels = levels.filter((l) => (l.status || 'approved') === 'approved')
   const pendingLevels = levels.filter((l) => l.status === 'pending')
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
+  // LEADERBOARD CALCULATION: Includes ALL registered profiles (even 0 points & unranked)
   const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
       const uLower = prof.username.trim().toLowerCase()
@@ -885,7 +884,6 @@ export default function Home() {
     })
     .sort((a, b) => b.totalPoints - a.totalPoints)
 
-  // Country Map Stats
   const activeCountryStats = COUNTRIES.map((c) => {
     const countryPlayers = leaderboard.filter((p) => p.country.toLowerCase() === c.code.toLowerCase())
     const totalCountryPts = countryPlayers.reduce((sum, p) => sum + p.totalPoints, 0)
@@ -901,7 +899,6 @@ export default function Home() {
       ? leaderboard
       : leaderboard.filter((p) => p.country.toLowerCase() === selectedCountryFilter.toLowerCase())
 
-  // ORANGE & WHITE / ORANGE & BLACK STYLING
   const pageBg = darkMode ? 'bg-[#09090b] text-white' : 'bg-[#ffffff] text-[#111827]'
   const cardClass = darkMode
     ? 'bg-[#121215] border-orange-500/30 text-white'
@@ -918,7 +915,6 @@ export default function Home() {
         (l.gd_level_id || '').includes(search.trim()))
   )
 
-  // Compute combined victor + enjoyment details for the Level Details Modal
   function getLevelVictorDetails(lvl: GoofyLevel) {
     const list: { username: string; displayName: string; videoUrl?: string; enjoyment?: number }[] = []
     const seen = new Set<string>()
@@ -956,7 +952,6 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen font-bold relative overflow-x-hidden transition-colors duration-300 ${pageBg}`}>
-      {/* GOOFY DISPLAY FONT & CLEAN ANIMATION STYLES */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap');
         .goofy-title {
@@ -978,7 +973,6 @@ export default function Home() {
         }
       `}</style>
 
-      {/* PERSISTENT ORANGE SIDE DECORATION BARS (ALWAYS ORANGE IN BOTH LIGHT & DARK MODES) */}
       {sideDecor && (
         <>
           <div
@@ -992,7 +986,6 @@ export default function Home() {
         </>
       )}
 
-      {/* TOP HEADER */}
       <header className={darkMode ? 'bg-[#09090b]/95 border-b border-orange-500/30 sticky top-0 z-40 backdrop-blur' : 'bg-white/95 border-b border-orange-200 sticky top-0 z-40 backdrop-blur'}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer select-none group" onClick={() => setActiveTab('classic')}>
@@ -1005,7 +998,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center space-x-3 text-sm font-bold">
-            {/* DISCORD INVITE ICON BUTTON */}
             <a
               href={DISCORD_INVITE_URL}
               target="_blank"
@@ -1019,7 +1011,6 @@ export default function Home() {
               <span className="hidden md:inline">Discord</span>
             </a>
 
-            {/* SIDE DECORATION TOGGLE */}
             <button
               onClick={handleToggleSideDecor}
               className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition ${
@@ -1032,7 +1023,6 @@ export default function Home() {
               Side Trim: {sideDecor ? 'ON' : 'OFF'}
             </button>
 
-            {/* LIGHT / DARK THEME TOGGLE */}
             <button
               onClick={handleToggleTheme}
               className="p-2 rounded-lg border border-orange-500/30 hover:bg-orange-500/10 text-orange-500 transition"
@@ -1077,7 +1067,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* NAVIGATION TABS */}
         <div className={darkMode ? 'bg-[#121215] border-t border-orange-500/20' : 'bg-orange-50/60 border-t border-orange-200'}>
           <div className="max-w-6xl mx-auto px-4 flex flex-wrap justify-center text-xs sm:text-sm font-bold">
             {[
@@ -1143,9 +1132,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* MAIN LAYOUT */}
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* LOGIN TAB */}
         {activeTab === 'login' && (
           <div className={`max-w-md mx-auto p-6 rounded-xl border space-y-4 animate-panel ${cardClass}`}>
             <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">GLL Login</h2>
@@ -1169,7 +1156,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* REGISTER TAB */}
         {activeTab === 'register' && (
           <div className={`max-w-md mx-auto p-6 rounded-xl border space-y-4 animate-panel ${cardClass}`}>
             <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">GLL Register</h2>
@@ -1205,7 +1191,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* PROFILE TAB */}
         {activeTab === 'profile' && currentUser && (
           <div className={`max-w-2xl mx-auto p-6 rounded-xl border space-y-6 animate-panel ${cardClass}`}>
             <div className="flex items-center justify-between border-b border-orange-500/20 pb-4">
@@ -1234,7 +1219,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Saved Gacha Inventory */}
             <div className="space-y-3 border-b border-orange-500/20 pb-4">
               <h3 className="goofy-title text-xl text-orange-500">
                 My Gacha Inventory ({currentUser.inventory?.length || 0} levels)
@@ -1320,10 +1304,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* LEADERBOARD TAB WITH INTERACTIVE COUNTRY MAP */}
         {activeTab === 'leaderboard' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-panel">
-            {/* INTERACTIVE WORLD COUNTRY MAP SELECTOR */}
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-500/20 pb-3">
                 <div>
@@ -1340,16 +1322,12 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Stylized SVG World Map + Interactive Country Pins */}
               <div className={`relative rounded-xl border border-orange-500/30 p-4 overflow-hidden ${darkMode ? 'bg-[#09090b]' : 'bg-orange-50/40'}`}>
                 <svg viewBox="0 0 800 320" className="w-full h-36 sm:h-44 opacity-25 text-orange-500 fill-current pointer-events-none">
-                  {/* North & South America */}
                   <path d="M90,45 L180,35 L230,85 L200,145 L155,155 L130,130 Z" />
                   <path d="M185,165 L245,175 L265,235 L220,300 L195,285 L180,215 Z" />
-                  {/* Europe & Africa */}
                   <path d="M355,40 L450,35 L465,95 L410,110 L360,95 Z" />
                   <path d="M360,120 L445,120 L475,185 L435,270 L395,260 L355,180 Z" />
-                  {/* Asia & Oceania */}
                   <path d="M475,40 L670,45 L700,125 L620,165 L520,150 L475,105 Z" />
                   <path d="M625,205 L710,205 L720,265 L640,275 Z" />
                 </svg>
@@ -1389,7 +1367,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* PLAYER RANKINGS */}
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
               <div className="flex items-center justify-between border-b border-orange-500/20 pb-2">
                 <h2 className="goofy-title text-3xl text-orange-500">
@@ -1397,7 +1374,7 @@ export default function Home() {
                     ? 'Global Player Leaderboard'
                     : `Top Players: ${COUNTRIES.find((c) => c.code === selectedCountryFilter)?.name || selectedCountryFilter.toUpperCase()}`}
                 </h2>
-                <span className="text-xs text-gray-400">{filteredLeaderboard.length} players</span>
+                <span className="text-xs text-gray-400">{filteredLeaderboard.length} registered players</span>
               </div>
 
               {filteredLeaderboard.length === 0 ? (
@@ -1412,7 +1389,9 @@ export default function Home() {
                       className="w-full text-left py-3.5 px-3 rounded-lg hover:bg-orange-500/10 flex items-center justify-between transition"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="goofy-title text-xl w-9 text-orange-500">#{idx + 1}</span>
+                        <span className={`goofy-title text-xl w-9 ${player.totalPoints > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
+                          {player.totalPoints > 0 ? `#${idx + 1}` : '-'}
+                        </span>
                         <img
                           src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`}
                           alt={player.country}
@@ -1428,7 +1407,9 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-orange-500">{player.totalPoints.toFixed(2)} pts</p>
+                        <p className={`text-sm ${player.totalPoints > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
+                          {player.totalPoints > 0 ? `${player.totalPoints.toFixed(2)} pts` : 'Unranked'}
+                        </p>
                         <p className="text-[11px] text-gray-400">{player.completedCount} levels</p>
                       </div>
                     </button>
@@ -1439,7 +1420,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ROULETTE CHALLENGE TAB */}
         {activeTab === 'roulette' && (
           <div className={`max-w-md mx-auto p-6 rounded-xl border text-center space-y-6 animate-panel ${cardClass}`}>
             <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Goofy Roulette</h2>
@@ -1487,7 +1467,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* GACHA TAB WITH COOLDOWN */}
         {activeTab === 'gacha' && (
           <div className={`max-w-md mx-auto p-6 rounded-xl border text-center space-y-6 animate-panel ${cardClass}`}>
             <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Goofy Level Gacha</h2>
@@ -1536,7 +1515,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* FORUM & BUG REPORTS TAB */}
         {activeTab === 'forum' && (
           <div className="max-w-3xl mx-auto space-y-6 animate-panel">
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
@@ -1622,12 +1600,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* MOD PANEL TAB */}
         {activeTab === 'mod' && isMod && (
           <div className={`max-w-4xl mx-auto p-6 rounded-xl border space-y-6 animate-panel ${cardClass}`}>
             <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Moderator Control Panel</h2>
 
-            {/* Pending Level Submissions */}
             <div className="space-y-3">
               <h3 className="goofy-title text-xl text-orange-500">Pending Level Approvals ({pendingLevels.length})</h3>
               {pendingLevels.length === 0 ? (
@@ -1653,7 +1629,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Pending Record Submissions */}
             <div className="space-y-3 border-t border-orange-500/20 pt-4">
               <h3 className="goofy-title text-xl text-orange-500">Pending Record Submissions ({pendingSubs.length})</h3>
               {pendingSubs.length === 0 ? (
@@ -1679,7 +1654,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Issue Warning */}
             <div className="border-t border-orange-500/20 pt-4 space-y-3">
               <h3 className="goofy-title text-xl text-orange-500">Issue User Warning</h3>
               <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1703,7 +1677,6 @@ export default function Home() {
               </form>
             </div>
 
-            {/* Manage Staff List */}
             <div className="border-t border-orange-500/20 pt-4 space-y-3">
               <h3 className="goofy-title text-xl text-orange-500">Manage Staff Section</h3>
               <form onSubmit={handleAddStaff} className="grid grid-cols-1 sm:grid-cols-6 gap-2">
@@ -1752,7 +1725,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* CLASSIC / PLATFORMER LEVEL LIST VIEW */}
         {(activeTab === 'classic' || activeTab === 'platformer') && (
           <div className="space-y-6 animate-panel">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1790,7 +1762,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* SUBMIT RECORD DRAWER */}
             {sidebarForm === 'record' && currentUser && (
               <form onSubmit={handleRecordSubmit} className={`p-5 rounded-xl border space-y-3 animate-panel ${cardClass}`}>
                 <h3 className="goofy-title text-xl text-orange-500">Submit Record / Completion</h3>
@@ -1837,7 +1808,6 @@ export default function Home() {
               </form>
             )}
 
-            {/* SUBMIT LEVEL DRAWER */}
             {sidebarForm === 'level' && currentUser && (
               <form onSubmit={handleLevelSubmit} className={`p-5 rounded-xl border space-y-3 animate-panel ${cardClass}`}>
                 <h3 className="goofy-title text-xl text-orange-500">Submit New Goofy Level</h3>
@@ -1882,7 +1852,6 @@ export default function Home() {
               </form>
             )}
 
-            {/* LEVEL LIST DISPLAY */}
             {shownLevels.length === 0 ? (
               <div className={`p-8 text-center rounded-xl border ${cardClass}`}>
                 <p className="text-sm text-gray-400">No approved levels found in this category.</p>
@@ -1957,7 +1926,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* LEVEL DETAILS MODAL (VICTORS & ENJOYMENT SCORES) */}
         {viewingLevel && (
           <div
             onClick={() => setViewingLevel(null)}
@@ -2043,7 +2011,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* MOD EDIT LEVEL MODAL */}
         {editingLevel && isMod && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
             <form onSubmit={handleSaveEditedLevel} className={`max-w-xl w-full p-6 rounded-xl border space-y-4 animate-panel ${cardClass}`}>
@@ -2162,7 +2129,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* PLAYER STATS MODAL */}
         {selectedPlayer && (
           <div
             onClick={() => setSelectedPlayer(null)}
