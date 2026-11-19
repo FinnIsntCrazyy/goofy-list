@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'dhavvin_09', 'lopikpl']
-const DISCORD_INVITE_URL = 'https://discord.gg/DYHV4BMgw'
+const DISCORD_INVITE_URL = 'https://discord.gg/YOUR_DISCORD_INVITE'
 
 const COUNTRIES = [
   { code: 'pl', name: 'Poland', region: 'Europe' },
@@ -122,6 +122,8 @@ interface Profile {
   discord: string
   twitter: string
   bio?: string
+  banner_url?: string
+  title_badge?: string
   warnings: string[]
   inventory?: number[]
   last_gacha_roll?: string | null
@@ -212,6 +214,8 @@ export default function Home() {
   const [editDiscord, setEditDiscord] = useState('')
   const [editTwitter, setEditTwitter] = useState('')
   const [editBio, setEditBio] = useState('')
+  const [editBanner, setEditBanner] = useState('')
+  const [editBadge, setEditBadge] = useState('Member')
 
   // Mod Warning & Staff states
   const [warnTargetUser, setWarnTargetUser] = useState('')
@@ -224,7 +228,7 @@ export default function Home() {
   // Mod Edit Level Modal states
   const [editingLevel, setEditingLevel] = useState<GoofyLevel | null>(null)
 
-  // Level Details Modal (Victors + Enjoyment)
+  // Level Details Modal
   const [viewingLevel, setViewingLevel] = useState<GoofyLevel | null>(null)
 
   // Dedicated Full Player Page View
@@ -239,7 +243,7 @@ export default function Home() {
   const [rouletteAchievedPct, setRouletteAchievedPct] = useState<number>(100)
   const [rouletteMessage, setRouletteMessage] = useState<string>('')
 
-  // Gacha & Cooldown states with Packs / Upgrades
+  // Gacha Packs & Upgrades
   const [gachaPack, setGachaPack] = useState<'standard' | 'premium' | 'god'>('standard')
   const [gachaRolledLevel, setGachaRolledLevel] = useState<GoofyLevel | null>(null)
   const [gachaAnimating, setGachaAnimating] = useState(false)
@@ -296,6 +300,8 @@ export default function Home() {
     setEditDiscord(prof.discord || '')
     setEditTwitter(prof.twitter || '')
     setEditBio(prof.bio || '')
+    setEditBanner(prof.banner_url || '')
+    setEditBadge(prof.title_badge || 'Member')
   }
 
   async function refreshAll() {
@@ -362,6 +368,8 @@ export default function Home() {
           country: regCountry,
           email: regEmail.trim(),
           bio: '',
+          banner_url: '',
+          title_badge: 'Newcomer',
           warnings: [],
           inventory: [],
           theme_mode: darkMode ? 'dark' : 'light',
@@ -606,6 +614,8 @@ export default function Home() {
         discord: editDiscord.trim(),
         twitter: editTwitter.trim(),
         bio: editBio.trim(),
+        banner_url: editBanner.trim(),
+        title_badge: editBadge.trim(),
       })
       .eq('id', currentUser.id)
 
@@ -619,11 +629,13 @@ export default function Home() {
         discord: editDiscord.trim(),
         twitter: editTwitter.trim(),
         bio: editBio.trim(),
+        banner_url: editBanner.trim(),
+        title_badge: editBadge.trim(),
       }
       setCurrentUser(updated)
       setEditPassword('')
       refreshAll()
-      showNotice('Profile settings and bio saved.')
+      showNotice('Profile settings, banner, and bio saved.')
     }
   }
 
@@ -645,7 +657,6 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  // DELETE WARNING (Staff / Mod / Owner Only)
   async function handleDeleteWarning(userId: string, warningIndex: number) {
     if (!isMod) return
     const target = profiles.find((p) => p.id === userId)
@@ -736,7 +747,6 @@ export default function Home() {
     setRouletteMessage(`Great job! Moved to next level based on your ${rouletteAchievedPct}% progress.`)
   }
 
-  // GACHA PACKS & UPGRADES
   async function spinGacha() {
     if (approvedLevels.length === 0) return
     if (!currentUser) {
@@ -784,7 +794,7 @@ export default function Home() {
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
-  // LEADERBOARD CALCULATION (Automatic Verifiers & Approved 100% Victors Only)
+  // LEADERBOARD CALCULATION: Includes ALL registered profiles (unranked / 0 points show '-' rank)
   const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
       const uLower = prof.username.trim().toLowerCase()
@@ -914,15 +924,15 @@ export default function Home() {
           font-family: 'Fredoka', 'Comic Sans MS', cursive, sans-serif;
           letter-spacing: -0.02em;
         }
-        @keyframes waveFlow {
+        @keyframes waveMotion {
           0% { background-position: 0% 0%; }
           50% { background-position: 0% 100%; }
           100% { background-position: 0% 0%; }
         }
         .animated-wave-trim {
-          background: linear-gradient(180deg, #f97316, #fb923c, #ea580c, #f97316);
+          background: linear-gradient(180deg, #f97316, #fb923c, #c2410c, #f97316);
           background-size: 100% 300%;
-          animation: waveFlow 6s ease infinite;
+          animation: waveMotion 5s ease-in-out infinite;
         }
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(10px); }
@@ -933,16 +943,16 @@ export default function Home() {
         }
       `}</style>
 
-      {/* ANIMATED WAVE SIDE TRIM BARS */}
+      {/* MOVING WAVE SIDE TRIM BARS */}
       {sideDecor && (
         <>
           <div
             aria-hidden="true"
-            className="fixed left-0 top-0 bottom-0 w-3.5 sm:w-6 z-50 pointer-events-none animated-wave-trim shadow-[0_0_25px_rgba(249,115,22,0.55)] border-r border-orange-300/40"
+            className="fixed left-0 top-0 bottom-0 w-3.5 sm:w-6 z-50 pointer-events-none animated-wave-trim shadow-[0_0_25px_rgba(249,115,22,0.6)] border-r border-orange-300/40"
           />
           <div
             aria-hidden="true"
-            className="fixed right-0 top-0 bottom-0 w-3.5 sm:w-6 z-50 pointer-events-none animated-wave-trim shadow-[0_0_25px_rgba(249,115,22,0.55)] border-l border-orange-300/40"
+            className="fixed right-0 top-0 bottom-0 w-3.5 sm:w-6 z-50 pointer-events-none animated-wave-trim shadow-[0_0_25px_rgba(249,115,22,0.6)] border-l border-orange-300/40"
           />
         </>
       )}
@@ -978,7 +988,7 @@ export default function Home() {
               className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition ${
                 sideDecor ? 'bg-orange-500/15 border-orange-500 text-orange-500' : 'border-gray-400/40 text-gray-400'
               }`}
-              title="Toggle Side Trim"
+              title="Toggle Side Waves"
             >
               Side Waves: {sideDecor ? 'ON' : 'OFF'}
             </button>
@@ -1169,139 +1179,175 @@ export default function Home() {
           </div>
         )}
 
-        {/* DEDICATED FULL PLAYER PROFILE PAGE */}
+        {/* DEDICATED FULL PLAYER PROFILE PAGE (ENHANCED TOP BANNER & MORE OPTIONS) */}
         {activeTab === 'profile' && viewingPlayer && (
-          <div className={`max-w-3xl mx-auto p-6 rounded-xl border space-y-6 animate-panel ${cardClass}`}>
-            <button
-              onClick={() => setActiveTab('leaderboard')}
-              className="text-xs bg-orange-500/15 text-orange-500 px-3 py-1.5 rounded-lg hover:bg-orange-500 hover:text-white transition"
-            >
-              Back to Leaderboard
-            </button>
-
-            {/* TOP HEADER INFO */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-orange-500/20 pb-6">
-              <div className="flex items-center gap-4">
-                <img
-                  src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
-                  alt={viewingPlayer.country}
-                  className="w-12 h-8 object-cover border border-orange-500 rounded"
-                />
-                <div>
-                  <h2 className="goofy-title text-3xl text-orange-500">{viewingPlayer.display_name}</h2>
-                  <p className="text-xs text-gray-400">@{viewingPlayer.username} - Global Rank #{leaderboard.findIndex((p) => p.id === viewingPlayer.id) + 1}</p>
+          <div className={`max-w-3xl mx-auto rounded-xl border overflow-hidden space-y-6 animate-panel ${cardClass}`}>
+            {/* BIG TOP BANNER HEADER */}
+            <div className="relative h-48 sm:h-56 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
+              {viewingPlayer.banner_url ? (
+                <img src={viewingPlayer.banner_url} alt="" className="w-full h-full object-cover opacity-85" />
+              ) : (
+                <div className="absolute inset-0 bg-orange-500/20 backdrop-blur-xs flex items-center justify-center">
+                  <span className="goofy-title text-4xl text-white/40 uppercase tracking-widest">{viewingPlayer.display_name}</span>
                 </div>
-              </div>
-
-              <div className="text-right bg-orange-500/10 border border-orange-500/30 px-4 py-2 rounded-xl">
-                <p className="goofy-title text-2xl text-orange-500">{viewingPlayer.totalPoints.toFixed(2)} pts</p>
-                <p className="text-xs text-gray-400">{viewingPlayer.completedCount} Completions</p>
-              </div>
-            </div>
-
-            {/* SOCIAL LINKS & BIO */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl space-y-2">
-                <p className="text-orange-500">Social Links</p>
-                <p className="text-gray-400">YouTube: {viewingPlayer.youtube || 'None'}</p>
-                <p className="text-gray-400">Discord: {viewingPlayer.discord || 'None'}</p>
-                <p className="text-gray-400">Twitter: {viewingPlayer.twitter || 'None'}</p>
-              </div>
-              <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl space-y-2">
-                <p className="text-orange-500">Player Bio / Description</p>
-                <p className="text-gray-400 italic">{viewingPlayer.bio || 'No description provided.'}</p>
-              </div>
-            </div>
-
-            {/* WARNINGS & MOD CONTROLS */}
-            {(viewingPlayer.warnings?.length || 0) > 0 && (
-              <div className="bg-orange-500/15 border border-orange-500 text-orange-500 p-4 rounded-xl text-xs space-y-2">
-                <p>Moderator Warnings ({viewingPlayer.warnings.length}):</p>
-                <div className="space-y-1">
-                  {viewingPlayer.warnings.map((w, i) => (
-                    <div key={i} className="flex items-center justify-between bg-black/20 px-3 py-1.5 rounded">
-                      <span>{w}</span>
-                      {isMod && (
-                        <button
-                          onClick={() => handleDeleteWarning(viewingPlayer.id, i)}
-                          className="text-red-400 hover:underline text-[11px]"
-                        >
-                          Delete Warning
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* EDIT PROFILE FORM (IF LOGGED IN AS THIS USER) */}
-            {currentUser && currentUser.id === viewingPlayer.id && (
-              <form onSubmit={handleProfileSave} className="border-t border-orange-500/20 pt-6 space-y-4">
-                <h3 className="goofy-title text-xl text-orange-500">Edit Your Profile</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs mb-1">Display Name</label>
-                    <input type="text" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Country</label>
-                    <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
-                      {COUNTRIES.map((c) => (
-                        <option key={c.code} value={c.code}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs mb-1">Profile Bio / Description</label>
-                  <textarea rows={2} value={editBio} onChange={(e) => setEditBio(e.target.value)} className={inputClass} placeholder="Tell everyone about yourself..." />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input type="text" placeholder="YouTube Handle" value={editYoutube} onChange={(e) => setEditYoutube(e.target.value)} className={inputClass} />
-                  <input type="text" placeholder="Discord Tag" value={editDiscord} onChange={(e) => setEditDiscord(e.target.value)} className={inputClass} />
-                  <input type="text" placeholder="Twitter / X" value={editTwitter} onChange={(e) => setEditTwitter(e.target.value)} className={inputClass} />
-                </div>
-                <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-5 py-2.5 rounded-lg transition">
-                  Save Profile
+              )}
+              <div className="absolute top-4 left-4">
+                <button
+                  onClick={() => setActiveTab('leaderboard')}
+                  className="text-xs bg-black/50 text-white px-3 py-1.5 rounded-lg hover:bg-black/80 backdrop-blur transition"
+                >
+                  Back to Leaderboard
                 </button>
-              </form>
-            )}
+              </div>
+            </div>
 
-            {/* COMPLETIONS & VERIFICATIONS LIST */}
-            <div className="space-y-3 border-t border-orange-500/20 pt-6">
-              <h3 className="goofy-title text-xl text-orange-500">Completions & Verifications ({viewingPlayer.entries.length})</h3>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {viewingPlayer.entries.length === 0 ? (
-                  <p className="text-xs text-gray-400">No completions or verifications recorded yet.</p>
-                ) : (
-                  viewingPlayer.entries.map((entry, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg text-xs">
-                      <div>
-                        <p className="text-sm">{entry.level.title}</p>
-                        <p className="text-gray-400">{entry.role} {entry.progress < 100 ? `(${entry.progress}%)` : ''} - +{entry.pointsEarned.toFixed(2)} pts</p>
-                      </div>
-                      {entry.videoUrl && (
-                        <a href={entry.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600 transition">
-                          Video Proof
-                        </a>
-                      )}
+            {/* PLAYER PROFILE DETAILS CONTAINER */}
+            <div className="px-6 pb-6 space-y-6 -mt-16 relative z-10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                <div className="flex items-end gap-4">
+                  <div className="relative">
+                    <img
+                      src={`https://picsum.photos/seed/${encodeURIComponent(viewingPlayer.username)}/120/120`}
+                      alt=""
+                      className="w-24 h-24 rounded-2xl border-4 border-orange-500 object-cover shadow-xl bg-black"
+                    />
+                    <img
+                      src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
+                      alt=""
+                      className="absolute -bottom-2 -right-2 w-7 h-5 object-cover border-2 border-white rounded shadow"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="goofy-title text-3xl text-white drop-shadow">{viewingPlayer.display_name}</h2>
+                      <span className="bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full uppercase font-bold">
+                        {viewingPlayer.title_badge || 'Member'}
+                      </span>
                     </div>
-                  ))
-                )}
+                    <p className="text-xs text-orange-200">@{viewingPlayer.username} - Rank #{leaderboard.findIndex((p) => p.id === viewingPlayer.id) + 1}</p>
+                  </div>
+                </div>
+
+                <div className="text-right bg-orange-500/20 backdrop-blur border border-orange-500/40 px-5 py-3 rounded-xl shadow-lg">
+                  <p className="goofy-title text-3xl text-orange-400">{viewingPlayer.totalPoints.toFixed(2)} pts</p>
+                  <p className="text-xs text-gray-300">{viewingPlayer.completedCount} Completions</p>
+                </div>
+              </div>
+
+              {/* SOCIAL LINKS & BIO */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl space-y-2">
+                  <p className="goofy-title text-sm text-orange-500">Social Links</p>
+                  <p className="text-gray-400">YouTube: {viewingPlayer.youtube || 'None'}</p>
+                  <p className="text-gray-400">Discord: {viewingPlayer.discord || 'None'}</p>
+                  <p className="text-gray-400">Twitter: {viewingPlayer.twitter || 'None'}</p>
+                </div>
+                <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl space-y-2">
+                  <p className="goofy-title text-sm text-orange-500">Player Bio</p>
+                  <p className="text-gray-400 italic">{viewingPlayer.bio || 'No bio description provided.'}</p>
+                </div>
+              </div>
+
+              {/* WARNINGS & MOD DELETE WARNINGS */}
+              {(viewingPlayer.warnings?.length || 0) > 0 && (
+                <div className="bg-orange-500/15 border border-orange-500 text-orange-500 p-4 rounded-xl text-xs space-y-2">
+                  <p className="font-bold">Moderator Warnings ({viewingPlayer.warnings.length}):</p>
+                  <div className="space-y-1">
+                    {viewingPlayer.warnings.map((w, i) => (
+                      <div key={i} className="flex items-center justify-between bg-black/20 px-3 py-1.5 rounded">
+                        <span>{w}</span>
+                        {isMod && (
+                          <button
+                            onClick={() => handleDeleteWarning(viewingPlayer.id, i)}
+                            className="text-red-400 hover:underline text-[11px]"
+                          >
+                            Delete Warning
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* EDIT PROFILE FORM (IF LOGGED IN AS THIS USER) */}
+              {currentUser && currentUser.id === viewingPlayer.id && (
+                <form onSubmit={handleProfileSave} className="border-t border-orange-500/20 pt-6 space-y-4">
+                  <h3 className="goofy-title text-xl text-orange-500">Edit Your Profile</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs mb-1">Display Name</label>
+                      <input type="text" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Country</label>
+                      <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
+                        {COUNTRIES.map((c) => (
+                          <option key={c.code} value={c.code}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Title Badge</label>
+                      <input type="text" value={editBadge} onChange={(e) => setEditBadge(e.target.value)} className={inputClass} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs mb-1">Profile Bio</label>
+                      <input type="text" value={editBio} onChange={(e) => setEditBio(e.target.value)} className={inputClass} placeholder="Short bio..." />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Banner Image URL</label>
+                      <input type="url" value={editBanner} onChange={(e) => setEditBanner(e.target.value)} className={inputClass} placeholder="https://..." />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" placeholder="YouTube Handle" value={editYoutube} onChange={(e) => setEditYoutube(e.target.value)} className={inputClass} />
+                    <input type="text" placeholder="Discord Tag" value={editDiscord} onChange={(e) => setEditDiscord(e.target.value)} className={inputClass} />
+                    <input type="text" placeholder="Twitter / X" value={editTwitter} onChange={(e) => setEditTwitter(e.target.value)} className={inputClass} />
+                  </div>
+                  <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-5 py-2.5 rounded-lg transition">
+                    Save Profile Settings
+                  </button>
+                </form>
+              )}
+
+              {/* COMPLETIONS & VERIFICATIONS */}
+              <div className="space-y-3 border-t border-orange-500/20 pt-6">
+                <h3 className="goofy-title text-xl text-orange-500">Completions & Verifications ({viewingPlayer.entries.length})</h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {viewingPlayer.entries.length === 0 ? (
+                    <p className="text-xs text-gray-400">No completions or verifications recorded yet.</p>
+                  ) : (
+                    viewingPlayer.entries.map((entry, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg text-xs">
+                        <div>
+                          <p className="text-sm">{entry.level.title}</p>
+                          <p className="text-gray-400">{entry.role} {entry.progress < 100 ? `(${entry.progress}%)` : ''} - +{entry.pointsEarned.toFixed(2)} pts</p>
+                        </div>
+                        {entry.videoUrl && (
+                          <a href={entry.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600 transition">
+                            Video Proof
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* LEADERBOARD TAB */}
+        {/* LEADERBOARD TAB WITH WORLD MAP & UNRANKED PLAYERS */}
         {activeTab === 'leaderboard' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-panel">
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-500/20 pb-3">
                 <div>
                   <h2 className="goofy-title text-3xl text-orange-500">Global Country Map</h2>
-                  <p className="text-xs text-gray-400">Click any country to filter top players.</p>
+                  <p className="text-xs text-gray-400">Click any country to filter top players from that nation.</p>
                 </div>
                 {selectedCountryFilter !== 'ALL' && (
                   <button
@@ -1345,7 +1391,9 @@ export default function Home() {
                     className="w-full text-left py-3 px-3 rounded-lg hover:bg-orange-500/10 flex items-center justify-between transition"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="goofy-title text-xl w-9 text-orange-500">#{idx + 1}</span>
+                      <span className="goofy-title text-xl w-9 text-orange-500">
+                        {player.totalPoints > 0 ? `#${idx + 1}` : '-'}
+                      </span>
                       <img src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`} alt="" className="w-5 h-3.5 border" />
                       <div>
                         <p className="text-sm hover:text-orange-500 transition">{player.display_name}</p>
@@ -1353,7 +1401,9 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-orange-500">{player.totalPoints.toFixed(2)} pts</p>
+                      <p className={`text-sm ${player.totalPoints > 0 ? 'text-orange-500' : 'text-gray-400'}`}>
+                        {player.totalPoints > 0 ? `${player.totalPoints.toFixed(2)} pts` : 'Unranked'}
+                      </p>
                     </div>
                   </button>
                 ))}
@@ -1365,7 +1415,6 @@ export default function Home() {
         {/* MINIGAMES TAB: HORIZONTAL ROULETTE & GACHA PACKS */}
         {activeTab === 'minigames' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-panel">
-            {/* HORIZONTAL ROULETTE */}
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
               <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Goofy Roulette (Horizontal)</h2>
               {rouletteLevel ? (
@@ -1413,7 +1462,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* GACHA PACKS & UPGRADES */}
             <div className={`p-6 rounded-xl border text-center space-y-6 ${cardClass}`}>
               <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Goofy Gacha Packs</h2>
               <div className="flex justify-center gap-3">
@@ -1524,24 +1572,84 @@ export default function Home() {
           </div>
         )}
 
-        {/* MOD PANEL TAB */}
+        {/* EXPANDED MOD PANEL TAB */}
         {activeTab === 'mod' && isMod && (
           <div className={`max-w-4xl mx-auto p-6 rounded-xl border space-y-6 animate-panel ${cardClass}`}>
-            <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Moderator Panel</h2>
+            <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Expanded Moderator Panel</h2>
+
             <div className="space-y-3">
               <h3 className="goofy-title text-xl text-orange-500">Pending Level Approvals ({pendingLevels.length})</h3>
-              {pendingLevels.map((lvl) => (
-                <div key={lvl.id} className="p-3 bg-orange-500/10 rounded-lg flex items-center justify-between text-xs">
-                  <div>
-                    <p className="text-sm">{lvl.title} by {lvl.creator}</p>
-                    <p className="text-gray-400">Points: {lvl.points}</p>
+              {pendingLevels.length === 0 ? (
+                <p className="text-xs text-gray-400">No pending level submissions.</p>
+              ) : (
+                pendingLevels.map((lvl) => (
+                  <div key={lvl.id} className="p-3 bg-orange-500/10 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <p className="text-sm">{lvl.title} by {lvl.creator}</p>
+                      <p className="text-gray-400">Points: {lvl.points}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
+                      <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
-                    <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-3 border-t border-orange-500/20 pt-4">
+              <h3 className="goofy-title text-xl text-orange-500">Pending Record Submissions ({pendingSubs.length})</h3>
+              {pendingSubs.length === 0 ? (
+                <p className="text-xs text-gray-400">No pending record submissions.</p>
+              ) : (
+                pendingSubs.map((sub) => (
+                  <div key={sub.id} className="p-3 bg-orange-500/10 rounded-lg flex items-center justify-between text-xs">
+                    <div>
+                      <p className="text-sm">{sub.player_name} - {sub.progress}% on {sub.level_title}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
+                      <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
+            </div>
+
+            <div className="border-t border-orange-500/20 pt-4 space-y-3">
+              <h3 className="goofy-title text-xl text-orange-500">Issue User Warning</h3>
+              <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input type="text" placeholder="Username" value={warnTargetUser} onChange={(e) => setWarnTargetUser(e.target.value)} className={inputClass} />
+                <input type="text" placeholder="Reason" value={warnReason} onChange={(e) => setWarnReason(e.target.value)} className={inputClass} />
+                <button type="submit" className="bg-red-600 text-white text-xs rounded-lg py-2">Issue Warning</button>
+              </form>
+            </div>
+
+            <div className="border-t border-orange-500/20 pt-4 space-y-3">
+              <h3 className="goofy-title text-xl text-orange-500">Manage Staff Members</h3>
+              <form onSubmit={handleAddStaff} className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+                <input type="text" placeholder="Name" value={modName} onChange={(e) => setModName(e.target.value)} className={`sm:col-span-2 ${inputClass}`} />
+                <input type="text" placeholder="Clan" value={modClan} onChange={(e) => setModClan(e.target.value)} className={inputClass} />
+                <select value={modCountry} onChange={(e) => setModCountry(e.target.value)} className={`sm:col-span-2 ${inputClass}`}>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+                <select value={modRole} onChange={(e) => setModRole(e.target.value as any)} className={inputClass}>
+                  <option value="editor">Editor</option>
+                  <option value="helper">Helper</option>
+                </select>
+                <button type="submit" className="sm:col-span-6 bg-orange-500 text-white text-xs py-2 rounded-lg">Add Staff</button>
+              </form>
+
+              <div className="space-y-1 pt-2">
+                {moderators.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between bg-orange-500/10 px-3 py-2 rounded-lg text-xs">
+                    <span>{m.name} ({m.role})</span>
+                    <button onClick={() => handleRemoveStaff(m.id)} className="text-red-500 hover:underline">Remove</button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
