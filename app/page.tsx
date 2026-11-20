@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'dhavinn_09', 'lopikpl']
+const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'dhavvin_09', 'lopikpl']
 const DISCORD_INVITE_URL = 'https://discord.gg/ePfDysKQxM'
+
+const BANNED_KEYWORDS = ['badword', 'offensiveword', 'spamword', 'scam', 'hack']
 
 const COUNTRIES = [
   { code: 'pl', name: 'Poland', region: 'Europe' },
@@ -68,12 +70,6 @@ const COUNTRIES = [
 
 const GACHA_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour cooldown
 
-interface VictorEntry {
-  username: string
-  video_url?: string
-  enjoyment?: number
-}
-
 interface GoofyLevel {
   id: number
   title: string
@@ -109,6 +105,8 @@ interface ForumPost {
   category: 'forum' | 'bug'
   title: string
   content: string
+  is_flagged?: boolean
+  moderation_reason?: string
   created_at: string
 }
 
@@ -123,6 +121,7 @@ interface Profile {
   twitter: string
   bio?: string
   banner_url?: string
+  pfp_url?: string
   title_badge?: string
   warnings: string[]
   inventory?: number[]
@@ -215,6 +214,7 @@ export default function Home() {
   const [editTwitter, setEditTwitter] = useState('')
   const [editBio, setEditBio] = useState('')
   const [editBanner, setEditBanner] = useState('')
+  const [editPfp, setEditPfp] = useState('')
   const [editBadge, setEditBadge] = useState('Member')
 
   // Mod Warning & Staff states
@@ -301,6 +301,7 @@ export default function Home() {
     setEditTwitter(prof.twitter || '')
     setEditBio(prof.bio || '')
     setEditBanner(prof.banner_url || '')
+    setEditPfp(prof.pfp_url || '')
     setEditBadge(prof.title_badge || 'Member')
   }
 
@@ -369,6 +370,7 @@ export default function Home() {
           email: regEmail.trim(),
           bio: '',
           banner_url: '',
+          pfp_url: '',
           title_badge: 'Newcomer',
           warnings: [],
           inventory: [],
@@ -506,6 +508,7 @@ export default function Home() {
     }
   }
 
+  // AUTO-MODERATION FOR FORUM & BUG REPORTS
   async function handleCreateForumPost(e: React.FormEvent) {
     e.preventDefault()
     if (!currentUser) {
@@ -515,6 +518,11 @@ export default function Home() {
     }
     if (!postTitle.trim() || !postContent.trim()) return
 
+    const combinedText = `${postTitle} ${postContent}`.toLowerCase()
+    const foundKeyword = BANNED_KEYWORDS.find((kw) => combinedText.includes(kw))
+    const isFlagged = Boolean(foundKeyword)
+    const modReason = foundKeyword ? `Auto-moderation flagged keyword: "${foundKeyword}"` : ''
+
     const { error } = await supabase.from('forum_posts').insert([
       {
         author_username: currentUser.username,
@@ -522,6 +530,8 @@ export default function Home() {
         category: postCategory,
         title: postTitle.trim(),
         content: postContent.trim(),
+        is_flagged: isFlagged,
+        moderation_reason: modReason,
       },
     ])
 
@@ -531,7 +541,11 @@ export default function Home() {
       setPostTitle('')
       setPostContent('')
       refreshAll()
-      showNotice(postCategory === 'bug' ? 'Bug report submitted successfully.' : 'Forum post published successfully.')
+      if (isFlagged) {
+        showNotice('Post submitted, but flagged by auto-moderation for review.')
+      } else {
+        showNotice(postCategory === 'bug' ? 'Bug report submitted successfully.' : 'Forum post published successfully.')
+      }
     }
   }
 
@@ -580,7 +594,7 @@ export default function Home() {
     } else {
       setEditingLevel(null)
       refreshAll()
-      showNotice('Level updated.')
+      showNotice('Level updated successfully.')
     }
   }
 
@@ -615,6 +629,7 @@ export default function Home() {
         twitter: editTwitter.trim(),
         bio: editBio.trim(),
         banner_url: editBanner.trim(),
+        pfp_url: editPfp.trim(),
         title_badge: editBadge.trim(),
       })
       .eq('id', currentUser.id)
@@ -630,12 +645,13 @@ export default function Home() {
         twitter: editTwitter.trim(),
         bio: editBio.trim(),
         banner_url: editBanner.trim(),
+        pfp_url: editPfp.trim(),
         title_badge: editBadge.trim(),
       }
       setCurrentUser(updated)
       setEditPassword('')
       refreshAll()
-      showNotice('Profile settings, banner, and bio saved.')
+      showNotice('Profile settings, avatar, banner, and bio saved.')
     }
   }
 
@@ -794,7 +810,7 @@ export default function Home() {
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
-  // LEADERBOARD CALCULATION: Includes ALL registered profiles (unranked / 0 points show '-' rank)
+  // LEADERBOARD SORTING: STRICTLY BY POINTS DESCENDING
   const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
       const uLower = prof.username.trim().toLowerCase()
@@ -848,7 +864,14 @@ export default function Home() {
         entries: entries.sort((a, b) => Number(b.level.points || 0) - Number(a.level.points || 0)),
       }
     })
-    .sort((a, b) => b.totalPoints - a.totalPoints)
+    .sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) {
+        return b.totalPoints - a.totalPoints
+      }
+      const hardestA = a.hardestLevel ? Number(a.hardestLevel.points || 0) : 0
+      const hardestB = b.hardestLevel ? Number(b.hardestLevel.points || 0) : 0
+      return hardestB - hardestA
+    })
 
   const activeCountryStats = COUNTRIES.map((c) => {
     const countryPlayers = leaderboard.filter((p) => p.country.toLowerCase() === c.code.toLowerCase())
@@ -1012,9 +1035,9 @@ export default function Home() {
             {currentUser ? (
               <div className="flex items-center gap-2">
                 <img
-                  src={`https://flagcdn.com/w20/${currentUser.country.toLowerCase()}.png`}
+                  src={currentUser.pfp_url || `https://picsum.photos/seed/${encodeURIComponent(currentUser.username)}/40/40`}
                   alt=""
-                  className="w-5 h-3.5 object-cover border border-orange-400"
+                  className="w-6 h-6 rounded-full object-cover border border-orange-500"
                 />
                 <button
                   onClick={() => {
@@ -1179,7 +1202,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* DEDICATED FULL PLAYER PROFILE PAGE (ENHANCED TOP BANNER & MORE OPTIONS) */}
+        {/* DEDICATED FULL PLAYER PROFILE PAGE (WITH CUSTOM PFP URL SUPPORT) */}
         {activeTab === 'profile' && viewingPlayer && (
           <div className={`max-w-3xl mx-auto rounded-xl border overflow-hidden space-y-6 animate-panel ${cardClass}`}>
             {/* BIG TOP BANNER HEADER */}
@@ -1187,7 +1210,7 @@ export default function Home() {
               {viewingPlayer.banner_url ? (
                 <img src={viewingPlayer.banner_url} alt="" className="w-full h-full object-cover opacity-85" />
               ) : (
-                <div className="absolute inset-0 bg-orange-500/20 backdrop-blur-xs flex items-center justify-center">
+                <div className="absolute inset-0 bg-orange-500/25 backdrop-blur-xs flex items-center justify-center">
                   <span className="goofy-title text-4xl text-white/40 uppercase tracking-widest">{viewingPlayer.display_name}</span>
                 </div>
               )}
@@ -1207,7 +1230,7 @@ export default function Home() {
                 <div className="flex items-end gap-4">
                   <div className="relative">
                     <img
-                      src={`https://picsum.photos/seed/${encodeURIComponent(viewingPlayer.username)}/120/120`}
+                      src={viewingPlayer.pfp_url || `https://picsum.photos/seed/${encodeURIComponent(viewingPlayer.username)}/120/120`}
                       alt=""
                       className="w-24 h-24 rounded-2xl border-4 border-orange-500 object-cover shadow-xl bg-black"
                     />
@@ -1292,10 +1315,14 @@ export default function Home() {
                       <input type="text" value={editBadge} onChange={(e) => setEditBadge(e.target.value)} className={inputClass} />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs mb-1">Profile Bio</label>
                       <input type="text" value={editBio} onChange={(e) => setEditBio(e.target.value)} className={inputClass} placeholder="Short bio..." />
+                    </div>
+                    <div>
+                      <label className="block text-xs mb-1">Avatar PFP URL</label>
+                      <input type="url" value={editPfp} onChange={(e) => setEditPfp(e.target.value)} className={inputClass} placeholder="https://..." />
                     </div>
                     <div>
                       <label className="block text-xs mb-1">Banner Image URL</label>
@@ -1340,7 +1367,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* LEADERBOARD TAB WITH WORLD MAP & UNRANKED PLAYERS */}
+        {/* LEADERBOARD TAB */}
         {activeTab === 'leaderboard' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-panel">
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
@@ -1412,7 +1439,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* MINIGAMES TAB: HORIZONTAL ROULETTE & GACHA PACKS */}
+        {/* MINIGAMES TAB */}
         {activeTab === 'minigames' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-panel">
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
@@ -1521,6 +1548,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto space-y-6 animate-panel">
             <div className={`p-6 rounded-xl border space-y-4 ${cardClass}`}>
               <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Community Forum & Bug Reports</h2>
+              <p className="text-xs text-gray-400">Auto-moderation is active to filter inappropriate content automatically.</p>
               <form onSubmit={handleCreateForumPost} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <select value={postCategory} onChange={(e) => setPostCategory(e.target.value as any)} className={inputClass}>
@@ -1554,9 +1582,16 @@ export default function Home() {
               {forumPosts.map((post) => (
                 <div key={post.id} className={`p-5 rounded-xl border space-y-2 ${cardClass}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-orange-500/20 text-orange-500 border border-orange-500/40">
-                      {post.category}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-orange-500/20 text-orange-500 border border-orange-500/40">
+                        {post.category}
+                      </span>
+                      {post.is_flagged && (
+                        <span className="text-[10px] uppercase px-2 py-0.5 rounded bg-red-500/20 text-red-500 border border-red-500/40 font-bold" title={post.moderation_reason}>
+                          Flagged by Auto-Mod
+                        </span>
+                      )}
+                    </div>
                     {isMod && (
                       <button onClick={() => handleDeleteForumPost(post.id)} className="text-xs text-red-500 hover:underline">
                         Delete
@@ -1572,7 +1607,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* EXPANDED MOD PANEL TAB */}
+        {/* EXPANDED MOD PANEL TAB (WITH VIDEO PROOF BUTTONS FOR ALL SUBMISSIONS) */}
         {activeTab === 'mod' && isMod && (
           <div className={`max-w-4xl mx-auto p-6 rounded-xl border space-y-6 animate-panel ${cardClass}`}>
             <h2 className="goofy-title text-3xl text-orange-500 border-b border-orange-500/20 pb-2">Expanded Moderator Panel</h2>
@@ -1588,7 +1623,12 @@ export default function Home() {
                       <p className="text-sm">{lvl.title} by {lvl.creator}</p>
                       <p className="text-gray-400">Points: {lvl.points}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      {lvl.verification_url && (
+                        <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="bg-orange-500/20 text-orange-500 border border-orange-500/40 px-2.5 py-1 rounded">
+                          Video Proof
+                        </a>
+                      )}
                       <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
                       <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
                     </div>
@@ -1607,7 +1647,12 @@ export default function Home() {
                     <div>
                       <p className="text-sm">{sub.player_name} - {sub.progress}% on {sub.level_title}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      {sub.video_url && (
+                        <a href={sub.video_url} target="_blank" rel="noreferrer" className="bg-orange-500/20 text-orange-500 border border-orange-500/40 px-2.5 py-1 rounded">
+                          Video Proof
+                        </a>
+                      )}
                       <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
                       <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
                     </div>
@@ -1718,7 +1763,7 @@ export default function Home() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <input type="text" placeholder="GD Level ID" value={lvlGdId} onChange={(e) => setLvlGdId(e.target.value)} className={inputClass} />
-                  <input type="text" placeholder="Verifier" value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
+                  <input type="text" placeholder="Verifier" value={lvlVerifier} onChange={(e) => setLvlVerifier(e.target.value)} className={inputClass} />
                   <input required type="url" placeholder="Video URL" value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
                   <input type="number" step="0.01" value={lvlPoints} onChange={(e) => setLvlPoints(e.target.value)} className={inputClass} />
                 </div>
@@ -1776,6 +1821,49 @@ export default function Home() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* LEVEL EDIT MODAL (WORKING EDIT BUTTON) */}
+        {editingLevel && isMod && (
+          <div onClick={() => setEditingLevel(null)} className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-md w-full p-6 rounded-xl border space-y-4 animate-panel ${cardClass}`}>
+              <div className="flex justify-between items-center border-b border-orange-500/20 pb-3">
+                <h3 className="goofy-title text-2xl text-orange-500">Edit Level</h3>
+                <button type="button" onClick={() => setEditingLevel(null)} className="text-xs bg-orange-500/15 text-orange-500 px-2.5 py-1 rounded-lg">Cancel</button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs mb-1">Title</label>
+                  <input required type="text" value={editingLevel.title} onChange={(e) => setEditingLevel({ ...editingLevel, title: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Creator</label>
+                  <input required type="text" value={editingLevel.creator} onChange={(e) => setEditingLevel({ ...editingLevel, creator: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Verifier</label>
+                  <input type="text" value={editingLevel.verifier || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verifier: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">GD Level ID</label>
+                  <input type="text" value={editingLevel.gd_level_id || ''} onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Verification Video URL</label>
+                  <input type="url" value={editingLevel.verification_url || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verification_url: e.target.value })} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Points</label>
+                  <input type="number" step="0.01" value={editingLevel.points || 0} onChange={(e) => setEditingLevel({ ...editingLevel, points: Number(e.target.value) })} className={inputClass} />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white text-xs py-2.5 rounded-lg transition">
+                Save Changes
+              </button>
+            </form>
           </div>
         )}
 
