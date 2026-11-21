@@ -159,6 +159,7 @@ const COUNTRIES = [
   { code: 'st', name: 'Sao Tome and Principe', region: 'Africa' },
   { code: 'sa', name: 'Saudi Arabia', region: 'Asia' },
   { code: 'sn', name: 'Senegal', region: 'Africa' },
+  { code: 'gb!seald', name: 'Sealand', region: 'Europe' },
   { code: 'rs', name: 'Serbia', region: 'Europe' },
   { code: 'sc', name: 'Seychelles', region: 'Africa' },
   { code: 'sl', name: 'Sierra Leone', region: 'Africa' },
@@ -892,6 +893,21 @@ export default function Home() {
     setWarnReason('')
     refreshAll()
     showNotice(`Warning issued to ${target.username}.`)
+  }
+
+  async function handleDeleteWarning(userId: string, warningIndex: number) {
+    if (!isMod) return
+    const target = profiles.find((p) => p.id === userId)
+    if (!target) return
+
+    const nextWarnings = [...(target.warnings || [])]
+    nextWarnings.splice(warningIndex, 1)
+
+    const { error } = await supabase.from('profiles').update({ warnings: nextWarnings }).eq('id', userId)
+    if (!error) {
+      refreshAll()
+      showNotice('Warning removed.')
+    }
   }
 
   async function handleReviewSubmission(subId: number, status: 'approved' | 'rejected') {
@@ -1757,29 +1773,59 @@ export default function Home() {
             </div>
           )}
 
-          {/* POINTERCRATE STATS VIEWER LEADERBOARD WITH REAL WORLD MAP SVG */}
+          {/* POINTERCRATE STATS VIEWER LEADERBOARD WITH FULLY CLICKABLE MAP */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
               <div className={`rounded-2xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-6 text-center space-y-3">
                   
-                  {/* DETAILED WORLD MAP SVG MATCHING YOUR REFERENCE IMAGE */}
+                  {/* INTERACTIVE CLICKABLE WORLD MAP SVG */}
                   <svg viewBox="0 0 1000 500" className="w-full h-48 sm:h-60 opacity-85">
                     <g fill={darkMode ? '#27272a' : '#cbd5e1'} stroke={darkMode ? '#3f3f46' : '#ffffff'} strokeWidth="1">
-                      {/* North America */}
-                      <path d="M120,80 Q160,50 200,70 T280,100 Q300,140 260,180 T180,220 Q130,180 120,130 Z" fill="#fb923c" />
+                      {/* North America (Clickable -> US) */}
+                      <path
+                        d="M120,80 Q160,50 200,70 T280,100 Q300,140 260,180 T180,220 Q130,180 120,130 Z"
+                        fill={selectedCountryFilter === 'us' ? '#f97316' : '#fb923c'}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { setSelectedCountryFilter('us'); setLbPage(0); }}
+                        title="Click to filter United States"
+                      />
                       {/* Greenland */}
                       <path d="M320,50 Q360,40 380,70 T350,110 Q310,100 320,50 Z" />
-                      {/* South America */}
-                      <path d="M250,230 Q300,240 310,290 T280,410 Q250,450 230,370 T240,270 Z" fill="#fdba74" />
-                      {/* Europe */}
-                      <path d="M470,80 Q530,60 570,90 T540,160 Q480,170 470,80 Z" fill="#f97316" />
+                      {/* South America (Clickable -> BR) */}
+                      <path
+                        d="M250,230 Q300,240 310,290 T280,410 Q250,450 230,370 T240,270 Z"
+                        fill={selectedCountryFilter === 'br' ? '#f97316' : '#fdba74'}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { setSelectedCountryFilter('br'); setLbPage(0); }}
+                        title="Click to filter Brazil"
+                      />
+                      {/* Europe (Clickable -> PL / GB / DE) */}
+                      <path
+                        d="M470,80 Q530,60 570,90 T540,160 Q480,170 470,80 Z"
+                        fill={selectedCountryFilter === 'pl' ? '#ea580c' : '#f97316'}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
+                        title="Click to filter Europe / Poland"
+                      />
                       {/* Africa */}
                       <path d="M480,180 Q560,170 580,230 T550,380 Q500,420 460,360 T480,180 Z" />
-                      {/* Asia */}
-                      <path d="M580,70 Q750,40 850,90 T900,220 Q750,260 620,180 T580,70 Z" fill="#fb923c" />
-                      {/* Oceania */}
-                      <path d="M780,310 Q850,300 880,350 T810,430 Q760,400 780,310 Z" fill="#fdba74" />
+                      {/* Asia (Clickable -> JP / CN) */}
+                      <path
+                        d="M580,70 Q750,40 850,90 T900,220 Q750,260 620,180 T580,70 Z"
+                        fill={selectedCountryFilter === 'jp' ? '#f97316' : '#fb923c'}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { setSelectedCountryFilter('jp'); setLbPage(0); }}
+                        title="Click to filter Japan / Asia"
+                      />
+                      {/* Oceania (Clickable -> AU) */}
+                      <path
+                        d="M780,310 Q850,300 880,350 T810,430 Q760,400 780,310 Z"
+                        fill={selectedCountryFilter === 'au' ? '#f97316' : '#fdba74'}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { setSelectedCountryFilter('au'); setLbPage(0); }}
+                        title="Click to filter Australia"
+                      />
                     </g>
                   </svg>
 
@@ -1874,6 +1920,114 @@ export default function Home() {
             </div>
           )}
 
+          {/* PROFILE PAGE */}
+          {activeTab === 'profile' && viewingPlayer && (
+            <div className={`max-w-4xl mx-auto rounded-2xl border overflow-hidden space-y-6 animate-panel ${cardClass}`}>
+              <div className="relative h-52 sm:h-60 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
+                {viewingPlayer.banner_url ? (
+                  <img src={viewingPlayer.banner_url} alt="" className="w-full h-full object-cover opacity-85" />
+                ) : (
+                  <div className="absolute inset-0 bg-orange-500/25 flex items-center justify-center">
+                    <span className="fancy-display text-4xl text-white/40 uppercase tracking-widest">{viewingPlayer.display_name}</span>
+                  </div>
+                )}
+                <div className="absolute top-4 left-4">
+                  <button
+                    onClick={() => setActiveTab('leaderboard')}
+                    className="text-sm bg-black/55 text-white px-4 py-2 rounded-xl hover:bg-black/80 backdrop-blur transition"
+                  >
+                    ← Back to Leaderboard
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-8 pb-8 space-y-6 -mt-16 relative z-10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                  <div className="flex items-end gap-4">
+                    <div className="relative">
+                      {renderAvatar(viewingPlayer, 'w-24 h-24 text-3xl shadow-xl')}
+                      <img
+                        src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
+                        alt=""
+                        className="absolute -bottom-1 -right-1 w-8 h-5 object-cover border-2 border-white rounded shadow"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h2 className="fancy-display text-3xl text-white drop-shadow">{viewingPlayer.display_name}</h2>
+                        <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5 rounded-full uppercase font-bold">
+                          {viewingPlayer.title_badge || 'Member'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-orange-200">
+                        @{viewingPlayer.username} • Rank #{leaderboard.findIndex((p) => p.id === viewingPlayer.id) + 1}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right bg-orange-500/20 backdrop-blur border border-orange-500/40 px-6 py-3.5 rounded-2xl shadow-lg">
+                    <p className="fancy-display text-3xl text-orange-400">{viewingPlayer.totalPoints.toFixed(2)} pts</p>
+                    <p className="text-sm text-gray-300">{viewingPlayer.completedCount} Completions</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl space-y-2">
+                    <p className="goofy-title text-lg text-orange-500">Social Links</p>
+                    <p className="text-gray-400">YouTube: {viewingPlayer.youtube || 'None'}</p>
+                    <p className="text-gray-400">Discord: {viewingPlayer.discord || 'None'}</p>
+                    <p className="text-gray-400">Twitter: {viewingPlayer.twitter || 'None'}</p>
+                  </div>
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl space-y-2">
+                    <p className="goofy-title text-lg text-orange-500">Player Bio</p>
+                    <p className="text-gray-400 italic">{viewingPlayer.bio || 'No bio description provided.'}</p>
+                  </div>
+                </div>
+
+                {currentUser && currentUser.id === viewingPlayer.id && (
+                  <form onSubmit={handleProfileSave} className="border-t border-orange-500/25 pt-6 space-y-4">
+                    <h3 className="fancy-display text-2xl text-orange-500">Edit Your Profile</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm mb-1">Display Name</label>
+                        <input type="text" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1">Country</label>
+                        <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
+                          {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1">Title Badge</label>
+                        <input type="text" value={editBadge} onChange={(e) => setEditBadge(e.target.value)} className={inputClass} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm mb-1">Profile Bio</label>
+                        <input type="text" value={editBio} onChange={(e) => setEditBio(e.target.value)} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1">Custom Avatar URL</label>
+                        <input type="url" value={editPfp} onChange={(e) => setEditPfp(e.target.value)} className={inputClass} placeholder="https://..." />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-1">Banner Image URL</label>
+                        <input type="url" value={editBanner} onChange={(e) => setEditBanner(e.target.value)} className={inputClass} placeholder="https://..." />
+                      </div>
+                    </div>
+                    <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-3 rounded-xl transition">
+                      Save Profile Settings
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* MINIGAMES TAB */}
           {activeTab === 'minigames' && (
             <div className="space-y-6 animate-panel">
@@ -1913,26 +2067,105 @@ export default function Home() {
             </div>
           )}
 
-          {/* MOD PANEL */}
+          {/* EXPANDED MOD PANEL */}
           {activeTab === 'mod' && isMod && (
             <div className={`p-8 rounded-2xl border space-y-6 animate-panel ${cardClass}`}>
-              <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/25 pb-3">Mod Panel</h2>
+              <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/25 pb-3">Expanded Moderator Panel</h2>
+
+              {/* PENDING LEVEL APPROVALS */}
               <div className="space-y-3">
                 <h3 className="goofy-title text-xl text-orange-500">Pending Levels ({pendingLevels.length})</h3>
-                {pendingLevels.map((lvl) => (
-                  <div key={lvl.id} className="p-3 bg-orange-500/10 rounded-xl flex justify-between text-sm">
-                    <span>{lvl.title} by {lvl.creator}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
-                      <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+                {pendingLevels.length === 0 ? (
+                  <p className="text-sm text-gray-400">No pending level submissions.</p>
+                ) : (
+                  pendingLevels.map((lvl) => (
+                    <div key={lvl.id} className="p-3 bg-orange-500/10 rounded-xl flex justify-between text-sm items-center">
+                      <span>{lvl.title} by {lvl.creator}</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs">Approve</button>
+                        <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs">Reject</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
+              </div>
+
+              {/* PENDING RECORD SUBMISSIONS */}
+              <div className="space-y-3 border-t border-orange-500/25 pt-5">
+                <h3 className="goofy-title text-xl text-orange-500">Pending Record Submissions ({pendingSubs.length})</h3>
+                {pendingSubs.length === 0 ? (
+                  <p className="text-sm text-gray-400">No pending record submissions.</p>
+                ) : (
+                  pendingSubs.map((sub) => (
+                    <div key={sub.id} className="p-3 bg-orange-500/10 rounded-xl flex justify-between text-sm items-center">
+                      <span>{sub.player_name} - {sub.progress}% on {sub.level_title}</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs">Approve</button>
+                        <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs">Reject</button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* BULK LEVEL POINT SCALER */}
+              <div className="border-t border-orange-500/25 pt-5 space-y-3">
+                <h3 className="goofy-title text-xl text-orange-500">Global Point Rebalancer</h3>
+                <div className="flex items-center gap-3 max-w-md">
+                  <input
+                    type="number"
+                    step="0.05"
+                    value={bulkPointMultiplier}
+                    onChange={(e) => setBulkPointMultiplier(e.target.value)}
+                    className={inputClass}
+                  />
+                  <button onClick={handleBulkScalePoints} className="bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm shrink-0">
+                    Scale All Points
+                  </button>
+                </div>
+              </div>
+
+              {/* ISSUE USER WARNING */}
+              <div className="border-t border-orange-500/25 pt-5 space-y-3">
+                <h3 className="goofy-title text-xl text-orange-500">Issue User Warning</h3>
+                <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <input type="text" placeholder="Username" value={warnTargetUser} onChange={(e) => setWarnTargetUser(e.target.value)} className={inputClass} />
+                  <input type="text" placeholder="Reason" value={warnReason} onChange={(e) => setWarnReason(e.target.value)} className={inputClass} />
+                  <button type="submit" className="bg-red-600 text-white text-sm rounded-xl py-2.5">Issue Warning</button>
+                </form>
+              </div>
+
+              {/* MANAGE STAFF MEMBERS */}
+              <div className="border-t border-orange-500/25 pt-5 space-y-3">
+                <h3 className="goofy-title text-xl text-orange-500">Manage Staff Members</h3>
+                <form onSubmit={handleAddStaff} className="grid grid-cols-1 sm:grid-cols-6 gap-3">
+                  <input required type="text" placeholder="Name" value={modName} onChange={(e) => setModName(e.target.value)} className={`sm:col-span-2 ${inputClass}`} />
+                  <input type="text" placeholder="Clan" value={modClan} onChange={(e) => setModClan(e.target.value)} className={inputClass} />
+                  <select value={modCountry} onChange={(e) => setModCountry(e.target.value)} className={`sm:col-span-2 ${inputClass}`}>
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
+                    ))}
+                  </select>
+                  <select value={modRole} onChange={(e) => setModRole(e.target.value as any)} className={inputClass}>
+                    <option value="editor">Editor</option>
+                    <option value="helper">Helper</option>
+                  </select>
+                  <button type="submit" className="sm:col-span-6 bg-orange-500 text-white text-sm py-3 rounded-xl">Add Staff Member</button>
+                </form>
+
+                <div className="space-y-2 pt-2">
+                  {moderators.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between bg-orange-500/10 px-4 py-2.5 rounded-xl text-sm">
+                      <span>{m.clan ? `[${m.clan}] ` : ''}{m.name} ({m.role})</span>
+                      <button onClick={() => handleRemoveStaff(m.id)} className="text-red-500 hover:underline">Remove</button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* LEVEL LIST VIEW */}
+          {/* LEVEL LIST VIEW WITH RESTORED EDIT & DELETE BUTTONS */}
           {activeTab === 'list' && (
             <div className="space-y-6 animate-panel">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1970,14 +2203,81 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <span className="fancy-display text-2xl sm:text-3xl text-orange-500">{Number(lvl.points || 0).toFixed(2)}</span>
-                        <span className="text-xs text-gray-400 block">points</span>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <span className="fancy-display text-2xl sm:text-3xl text-orange-500">{Number(lvl.points || 0).toFixed(2)}</span>
+                          <span className="text-xs text-gray-400 block">points</span>
+                        </div>
+                        {isMod && (
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => setEditingLevel(lvl)} className="bg-orange-500 text-white text-sm px-4 py-2 rounded-xl">Edit</button>
+                            <button onClick={() => handleDeleteLevel(lvl.id, lvl.title)} className="bg-red-600 text-white text-sm px-4 py-2 rounded-xl">Delete</button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* LEVEL EDIT MODAL */}
+          {editingLevel && isMod && (
+            <div onClick={() => setEditingLevel(null)} className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 overflow-y-auto">
+              <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-lg w-full p-7 rounded-2xl border space-y-4 animate-panel ${cardClass}`}>
+                <div className="flex justify-between items-center border-b border-orange-500/25 pb-3">
+                  <h3 className="fancy-display text-2xl text-orange-500">Edit Level Details</h3>
+                  <button type="button" onClick={() => setEditingLevel(null)} className="text-sm bg-orange-500/15 text-orange-500 px-3 py-1 rounded-xl">Cancel</button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1">Title</label>
+                    <input required type="text" value={editingLevel.title} onChange={(e) => setEditingLevel({ ...editingLevel, title: e.target.value })} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">List Category</label>
+                    <select value={editingLevel.mode || 'classic'} onChange={(e) => setEditingLevel({ ...editingLevel, mode: e.target.value as ListCategory })} className={inputClass}>
+                      <option value="classic">Classic List</option>
+                      <option value="platformer">Platformer List</option>
+                      <option value="impossible">Impossible List</option>
+                      <option value="spam">Spam List</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1">Creator</label>
+                    <input required type="text" value={editingLevel.creator} onChange={(e) => setEditingLevel({ ...editingLevel, creator: e.target.value })} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">Verifier</label>
+                    <input type="text" value={editingLevel.verifier || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verifier: e.target.value })} className={inputClass} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs mb-1">GD Level ID</label>
+                    <input type="text" value={editingLevel.gd_level_id || ''} onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">Points</label>
+                    <input type="number" step="0.01" value={editingLevel.points || 0} onChange={(e) => setEditingLevel({ ...editingLevel, points: Number(e.target.value) })} className={inputClass} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs mb-1">Verification Video URL</label>
+                  <input type="url" value={editingLevel.verification_url || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verification_url: e.target.value })} className={inputClass} />
+                </div>
+
+                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm py-3 rounded-xl transition">
+                  Save Level Changes
+                </button>
+              </form>
             </div>
           )}
         </main>
