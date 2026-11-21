@@ -355,7 +355,7 @@ export default function Home() {
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
 
-  // Submit Record states (with introduction and description)
+  // Submit Record states
   const [recMode, setRecMode] = useState<ListCategory>('classic')
   const [recLevelId, setRecLevelId] = useState<number>(0)
   const [recProgress, setRecProgress] = useState(100)
@@ -365,7 +365,7 @@ export default function Home() {
   const [recDesc, setRecDesc] = useState('')
   const [recNotes, setRecNotes] = useState('')
 
-  // Submit Level states (with introduction and description)
+  // Submit Level states
   const [lvlMode, setLvlMode] = useState<ListCategory>('classic')
   const [lvlTitle, setLvlTitle] = useState('')
   const [lvlCreator, setLvlCreator] = useState('')
@@ -894,21 +894,6 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  async function handleDeleteWarning(userId: string, warningIndex: number) {
-    if (!isMod) return
-    const target = profiles.find((p) => p.id === userId)
-    if (!target) return
-
-    const nextWarnings = [...(target.warnings || [])]
-    nextWarnings.splice(warningIndex, 1)
-
-    const { error } = await supabase.from('profiles').update({ warnings: nextWarnings }).eq('id', userId)
-    if (!error) {
-      refreshAll()
-      showNotice('Warning removed.')
-    }
-  }
-
   async function handleReviewSubmission(subId: number, status: 'approved' | 'rejected') {
     if (!isMod) return
     const { error } = await supabase.from('submissions').update({ status }).eq('id', subId)
@@ -1417,7 +1402,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* RIGHT-SIDE SLIDE-OUT DRAWER FOR SUBMIT RECORD / SUBMIT LEVEL (WITH INTRODUCTION & DESCRIPTION) */}
+      {/* RIGHT-SIDE SLIDE-OUT DRAWER FOR SUBMIT RECORD / SUBMIT LEVEL */}
       {rightDrawer !== 'none' && currentUser && (
         <div onClick={() => setRightDrawer('none')} className="fixed inset-0 bg-black/65 z-50 flex justify-end">
           <div
@@ -1465,11 +1450,11 @@ export default function Home() {
                 </div>
                 <div>
                   <label className="block text-sm mb-1.5">Introduction / Hook</label>
-                  <input type="text" placeholder="Short intro or greeting..." value={recIntro} onChange={(e) => setRecIntro(e.target.value)} className={inputClass} />
+                  <input type="text" placeholder="Short intro..." value={recIntro} onChange={(e) => setRecIntro(e.target.value)} className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm mb-1.5">Submission Description</label>
-                  <textarea rows={2} placeholder="Describe your completion experience..." value={recDesc} onChange={(e) => setRecDesc(e.target.value)} className={inputClass} />
+                  <textarea rows={2} placeholder="Describe your completion..." value={recDesc} onChange={(e) => setRecDesc(e.target.value)} className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm mb-1.5">Enjoyment Rating (1 - 10)</label>
@@ -1507,7 +1492,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm mb-1">Creator(s)</label>
-                    <input required type="text" placeholder="Creator name" value={lvlCreator} onChange={(e) => setlvlCreator(e.target.value)} className={inputClass} />
+                    <input required type="text" placeholder="Creator name" value={lvlCreator} onChange={(e) => setLvlCreator(e.target.value)} className={inputClass} />
                   </div>
                   <div>
                     <label className="block text-sm mb-1">Verifier</label>
@@ -1772,11 +1757,32 @@ export default function Home() {
             </div>
           )}
 
-          {/* POINTERCRATE STATS VIEWER LEADERBOARD */}
+          {/* POINTERCRATE STATS VIEWER LEADERBOARD WITH REAL WORLD MAP SVG */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
               <div className={`rounded-2xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-6 text-center space-y-3">
+                  
+                  {/* DETAILED WORLD MAP SVG MATCHING YOUR REFERENCE IMAGE */}
+                  <svg viewBox="0 0 1000 500" className="w-full h-48 sm:h-60 opacity-85">
+                    <g fill={darkMode ? '#27272a' : '#cbd5e1'} stroke={darkMode ? '#3f3f46' : '#ffffff'} strokeWidth="1">
+                      {/* North America */}
+                      <path d="M120,80 Q160,50 200,70 T280,100 Q300,140 260,180 T180,220 Q130,180 120,130 Z" fill="#fb923c" />
+                      {/* Greenland */}
+                      <path d="M320,50 Q360,40 380,70 T350,110 Q310,100 320,50 Z" />
+                      {/* South America */}
+                      <path d="M250,230 Q300,240 310,290 T280,410 Q250,450 230,370 T240,270 Z" fill="#fdba74" />
+                      {/* Europe */}
+                      <path d="M470,80 Q530,60 570,90 T540,160 Q480,170 470,80 Z" fill="#f97316" />
+                      {/* Africa */}
+                      <path d="M480,180 Q560,170 580,230 T550,380 Q500,420 460,360 T480,180 Z" />
+                      {/* Asia */}
+                      <path d="M580,70 Q750,40 850,90 T900,220 Q750,260 620,180 T580,70 Z" fill="#fb923c" />
+                      {/* Oceania */}
+                      <path d="M780,310 Q850,300 880,350 T810,430 Q760,400 780,310 Z" fill="#fdba74" />
+                    </g>
+                  </svg>
+
                   <h2 className="fancy-display text-2xl sm:text-3xl text-orange-500">Stats Viewer -</h2>
                   <select
                     value={selectedCountryFilter}
