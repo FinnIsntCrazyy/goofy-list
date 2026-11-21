@@ -255,7 +255,6 @@ interface Submission {
   video_url: string
   enjoyment: number
   mod_notes: string
-  submission_description?: string
   status: string
 }
 
@@ -360,7 +359,6 @@ export default function Home() {
   const [recProgress, setRecProgress] = useState(100)
   const [recVideo, setRecVideo] = useState('')
   const [recEnjoyment, setRecEnjoyment] = useState(8)
-  const [recDesc, setRecDesc] = useState('')
   const [recNotes, setRecNotes] = useState('')
 
   const [lvlMode, setLvlMode] = useState<ListCategory>('classic')
@@ -624,7 +622,6 @@ export default function Home() {
         progress: recProgress,
         video_url: recVideo.trim(),
         enjoyment: recEnjoyment,
-        submission_description: recDesc.trim(),
         mod_notes: recNotes.trim(),
         status: 'pending',
       },
@@ -634,7 +631,6 @@ export default function Home() {
       alert('Error: ' + error.message)
     } else {
       setRecVideo('')
-      setRecDesc('')
       setRecNotes('')
       setRightDrawer('none')
       refreshAll()
@@ -1378,10 +1374,6 @@ export default function Home() {
                 <div>
                   <label className="block text-sm mb-1.5">Video Proof URL</label>
                   <input required type="url" placeholder="https://youtube.com/..." value={recVideo} onChange={(e) => setRecVideo(e.target.value)} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1.5">Submission Description</label>
-                  <textarea rows={2} placeholder="Describe your completion..." value={recDesc} onChange={(e) => setRecDesc(e.target.value)} className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm mb-1.5">Enjoyment Rating (1 - 10)</label>
