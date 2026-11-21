@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'paulhsu123']
+const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'paulhsu123', 'dhavvin_09', 'lopikpl']
 const DISCORD_INVITE_URL = 'https://discord.gg/ePfDysKQxM'
 const BANNED_KEYWORDS = ['badword', 'offensiveword', 'spamword', 'scam', 'hack']
 
@@ -16,7 +16,6 @@ const COUNTRIES = [
   { code: 'ag', name: 'Antigua and Barbuda', region: 'North America' },
   { code: 'ar', name: 'Argentina', region: 'South America' },
   { code: 'am', name: 'Armenia', region: 'Asia' },
-  { code: 'aq', name: 'Antarctica', region: 'Antarctica' },
   { code: 'au', name: 'Australia', region: 'Oceania' },
   { code: 'at', name: 'Austria', region: 'Europe' },
   { code: 'az', name: 'Azerbaijan', region: 'Asia' },
@@ -159,7 +158,6 @@ const COUNTRIES = [
   { code: 'st', name: 'Sao Tome and Principe', region: 'Africa' },
   { code: 'sa', name: 'Saudi Arabia', region: 'Asia' },
   { code: 'sn', name: 'Senegal', region: 'Africa' },
-  { code: 'gb!seald', name: 'Sealand', region: 'Europe' },
   { code: 'rs', name: 'Serbia', region: 'Europe' },
   { code: 'sc', name: 'Seychelles', region: 'Africa' },
   { code: 'sl', name: 'Sierra Leone', region: 'Africa' },
@@ -204,6 +202,12 @@ const COUNTRIES = [
   { code: 'ye', name: 'Yemen', region: 'Asia' },
   { code: 'zm', name: 'Zambia', region: 'Africa' },
   { code: 'zw', name: 'Zimbabwe', region: 'Africa' },
+  // Newly added territories
+  { code: 'sealand', name: 'Principality of Sealand', region: 'Europe' },
+  { code: 'aq', name: 'Antarctica', region: 'Antarctica' },
+  { code: 'fo', name: 'Faroe Islands', region: 'Europe' },
+  { code: 'ax', name: 'Åland Islands', region: 'Europe' },
+  { code: 'gl', name: 'Greenland', region: 'North America' },
 ]
 
 const GACHA_COOLDOWN_MS = 60 * 60 * 1000
@@ -412,7 +416,6 @@ export default function Home() {
 
   // Full Level Details View
   const [viewingLevel, setViewingLevel] = useState<GoofyLevel | null>(null)
-  const [showHistoryTable, setShowHistoryTable] = useState(true)
 
   // Dedicated Full Player Page View
   const [viewingPlayer, setViewingPlayer] = useState<PlayerLeaderboardRow | null>(null)
@@ -748,13 +751,6 @@ export default function Home() {
     }
   }
 
-  async function handleDeleteForumPost(postId: number) {
-    if (!isMod) return
-    await supabase.from('forum_posts').delete().eq('id', postId)
-    refreshAll()
-    showNotice('Post removed.')
-  }
-
   async function handleDeleteLevel(levelId: number, title: string) {
     if (!isMod) return
     if (!confirm(`Are you sure you want to delete "${title}"?`)) return
@@ -895,21 +891,6 @@ export default function Home() {
     showNotice(`Warning issued to ${target.username}.`)
   }
 
-  async function handleDeleteWarning(userId: string, warningIndex: number) {
-    if (!isMod) return
-    const target = profiles.find((p) => p.id === userId)
-    if (!target) return
-
-    const nextWarnings = [...(target.warnings || [])]
-    nextWarnings.splice(warningIndex, 1)
-
-    const { error } = await supabase.from('profiles').update({ warnings: nextWarnings }).eq('id', userId)
-    if (!error) {
-      refreshAll()
-      showNotice('Warning removed.')
-    }
-  }
-
   async function handleReviewSubmission(subId: number, status: 'approved' | 'rejected') {
     if (!isMod) return
     const { error } = await supabase.from('submissions').update({ status }).eq('id', subId)
@@ -984,54 +965,11 @@ export default function Home() {
     setRouletteMessage(`Great job! Moved to next level based on your ${rouletteAchievedPct}% progress.`)
   }
 
-  async function spinGacha() {
-    if (approvedLevels.length === 0) return
-    if (!currentUser) {
-      alert('Please log in to use the Level Gacha and save to your inventory.')
-      setActiveTab('login')
-      return
-    }
-    if (cooldownRemainingMs > 0) return
-
-    setGachaAnimating(true)
-    setTimeout(async () => {
-      let candidatePool = approvedLevels
-      if (gachaPack === 'premium') candidatePool = approvedLevels.filter((l) => Number(l.points || 0) >= 200)
-      if (gachaPack === 'god') candidatePool = approvedLevels.filter((l) => Number(l.points || 0) >= 400)
-      if (candidatePool.length === 0) candidatePool = approvedLevels
-
-      const randomLvl = candidatePool[Math.floor(Math.random() * candidatePool.length)]
-      setGachaRolledLevel(randomLvl)
-      setGachaAnimating(false)
-
-      const nowIso = new Date().toISOString()
-      const currentInv = currentUser.inventory || []
-      const newInv = currentInv.includes(randomLvl.id) ? currentInv : [...currentInv, randomLvl.id]
-
-      await supabase
-        .from('profiles')
-        .update({ inventory: newInv, last_gacha_roll: nowIso })
-        .eq('id', currentUser.id)
-
-      setCurrentUser({ ...currentUser, inventory: newInv, last_gacha_roll: nowIso })
-      setCooldownRemainingMs(GACHA_COOLDOWN_MS)
-      refreshAll()
-    }, 900)
-  }
-
-  function formatCooldown(ms: number) {
-    const totalSecs = Math.ceil(ms / 1000)
-    const mins = Math.floor(totalSecs / 60)
-    const secs = totalSecs % 60
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-  }
-
   const approvedLevels = levels.filter((l) => (l.status || 'approved') === 'approved')
   const pendingLevels = levels.filter((l) => l.status === 'pending')
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
-  // LEADERBOARD SORTING: STRICTLY BY POINTS DESCENDING
   const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
       const uLower = prof.username.trim().toLowerCase()
@@ -1206,7 +1144,6 @@ export default function Home() {
         }
       `}</style>
 
-      {/* LITERAL LAYERED ORANGE SVG WAVE SIDE TRIMS */}
       {sideDecor && (
         <>
           <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-7 sm:w-12 z-40 pointer-events-none overflow-hidden">
@@ -1318,7 +1255,6 @@ export default function Home() {
               Welcome
             </button>
 
-            {/* DROPDOWN TAB FOR CLASSIC, PLATFORMER, IMPOSSIBLE & SPAM LIST */}
             <div className="relative">
               <button
                 onClick={() => setListsDropdownOpen((prev) => !prev)}
@@ -1418,7 +1354,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* RIGHT-SIDE SLIDE-OUT DRAWER FOR SUBMIT RECORD / SUBMIT LEVEL */}
+      {/* RIGHT-SIDE SLIDE-OUT DRAWER */}
       {rightDrawer !== 'none' && currentUser && (
         <div onClick={() => setRightDrawer('none')} className="fixed inset-0 bg-black/65 z-50 flex justify-end">
           <div
@@ -1773,59 +1709,77 @@ export default function Home() {
             </div>
           )}
 
-          {/* POINTERCRATE STATS VIEWER LEADERBOARD WITH FULLY CLICKABLE MAP */}
+          {/* POINTERCRATE STATS VIEWER LEADERBOARD WITH CLICKABLE SVG MAP */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
               <div className={`rounded-2xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-6 text-center space-y-3">
                   
-                  {/* INTERACTIVE CLICKABLE WORLD MAP SVG */}
+                  {/* INTERACTIVE CLICKABLE WORLD MAP SVG WITH VALID CHILD <title> TAGS */}
                   <svg viewBox="0 0 1000 500" className="w-full h-48 sm:h-60 opacity-85">
                     <g fill={darkMode ? '#27272a' : '#cbd5e1'} stroke={darkMode ? '#3f3f46' : '#ffffff'} strokeWidth="1">
-                      {/* North America (Clickable -> US) */}
+                      {/* North America (US/Greenland) */}
                       <path
                         d="M120,80 Q160,50 200,70 T280,100 Q300,140 260,180 T180,220 Q130,180 120,130 Z"
                         fill={selectedCountryFilter === 'us' ? '#f97316' : '#fb923c'}
                         className="cursor-pointer hover:opacity-80 transition"
                         onClick={() => { setSelectedCountryFilter('us'); setLbPage(0); }}
-                        title="Click to filter United States"
-                      />
+                      >
+                        <title>United States</title>
+                      </path>
+
                       {/* Greenland */}
-                      <path d="M320,50 Q360,40 380,70 T350,110 Q310,100 320,50 Z" />
-                      {/* South America (Clickable -> BR) */}
+                      <path
+                        d="M320,50 Q360,40 380,70 T350,110 Q310,100 320,50 Z"
+                        fill={selectedCountryFilter === 'gl' ? '#f97316' : '#fb923c'}
+                        className="cursor-pointer hover:opacity-80 transition"
+                        onClick={() => { setSelectedCountryFilter('gl'); setLbPage(0); }}
+                      >
+                        <title>Greenland</title>
+                      </path>
+
+                      {/* South America (Brazil) */}
                       <path
                         d="M250,230 Q300,240 310,290 T280,410 Q250,450 230,370 T240,270 Z"
                         fill={selectedCountryFilter === 'br' ? '#f97316' : '#fdba74'}
                         className="cursor-pointer hover:opacity-80 transition"
                         onClick={() => { setSelectedCountryFilter('br'); setLbPage(0); }}
-                        title="Click to filter Brazil"
-                      />
-                      {/* Europe (Clickable -> PL / GB / DE) */}
+                      >
+                        <title>Brazil</title>
+                      </path>
+
+                      {/* Europe (Poland / UK / Faroe / Aland) */}
                       <path
                         d="M470,80 Q530,60 570,90 T540,160 Q480,170 470,80 Z"
                         fill={selectedCountryFilter === 'pl' ? '#ea580c' : '#f97316'}
                         className="cursor-pointer hover:opacity-80 transition"
                         onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
-                        title="Click to filter Europe / Poland"
-                      />
+                      >
+                        <title>Poland & Europe</title>
+                      </path>
+
                       {/* Africa */}
                       <path d="M480,180 Q560,170 580,230 T550,380 Q500,420 460,360 T480,180 Z" />
-                      {/* Asia (Clickable -> JP / CN) */}
+
+                      {/* Asia (Japan / China) */}
                       <path
                         d="M580,70 Q750,40 850,90 T900,220 Q750,260 620,180 T580,70 Z"
                         fill={selectedCountryFilter === 'jp' ? '#f97316' : '#fb923c'}
                         className="cursor-pointer hover:opacity-80 transition"
                         onClick={() => { setSelectedCountryFilter('jp'); setLbPage(0); }}
-                        title="Click to filter Japan / Asia"
-                      />
-                      {/* Oceania (Clickable -> AU) */}
+                      >
+                        <title>Japan & Asia</title>
+                      </path>
+
+                      {/* Oceania (Australia) */}
                       <path
                         d="M780,310 Q850,300 880,350 T810,430 Q760,400 780,310 Z"
                         fill={selectedCountryFilter === 'au' ? '#f97316' : '#fdba74'}
                         className="cursor-pointer hover:opacity-80 transition"
                         onClick={() => { setSelectedCountryFilter('au'); setLbPage(0); }}
-                        title="Click to filter Australia"
-                      />
+                      >
+                        <title>Australia</title>
+                      </path>
                     </g>
                   </svg>
 
@@ -1993,7 +1947,7 @@ export default function Home() {
                         <input type="text" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} className={inputClass} />
                       </div>
                       <div>
-                        <label className="block text-sm mb-1">Country</label>
+                        <label className="block text-sm mb-1">Country / Territory</label>
                         <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
                           {COUNTRIES.map((c) => (
                             <option key={c.code} value={c.code}>{c.name}</option>
@@ -2165,7 +2119,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* LEVEL LIST VIEW WITH RESTORED EDIT & DELETE BUTTONS */}
+          {/* LEVEL LIST VIEW */}
           {activeTab === 'list' && (
             <div className="space-y-6 animate-panel">
               <div className="flex flex-wrap items-center justify-between gap-4">
