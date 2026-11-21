@@ -10,13 +10,13 @@ const BANNED_KEYWORDS = ['badword', 'offensiveword', 'spamword', 'scam', 'hack']
 const COUNTRIES = [
   { code: 'af', name: 'Afghanistan', region: 'Asia' },
   { code: 'al', name: 'Albania', region: 'Europe' },
-  { code: 'aq', name: 'Antarctica', region: 'Antarctica' },
   { code: 'dz', name: 'Algeria', region: 'Africa' },
   { code: 'ad', name: 'Andorra', region: 'Europe' },
   { code: 'ao', name: 'Angola', region: 'Africa' },
   { code: 'ag', name: 'Antigua and Barbuda', region: 'North America' },
   { code: 'ar', name: 'Argentina', region: 'South America' },
   { code: 'am', name: 'Armenia', region: 'Asia' },
+  { code: 'aq', name: 'Antarctica', region: 'Antarctica' },
   { code: 'au', name: 'Australia', region: 'Oceania' },
   { code: 'at', name: 'Austria', region: 'Europe' },
   { code: 'az', name: 'Azerbaijan', region: 'Asia' },
@@ -251,6 +251,8 @@ interface Submission {
   video_url: string
   enjoyment: number
   mod_notes: string
+  introduction?: string
+  submission_description?: string
   status: string
 }
 
@@ -329,7 +331,7 @@ export default function Home() {
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
   const [activeTab, setActiveTab] = useState<
-    'welcome' | 'list' | 'level_detail' | 'leaderboard' | 'staff' | 'minigames' | 'forum' | 'profile' | 'mod' | 'login' | 'register'
+    'welcome' | 'list' | 'level_detail' | 'leaderboard' | 'minigames' | 'forum' | 'profile' | 'mod' | 'login' | 'register'
   >('welcome')
   const [selectedListMode, setSelectedListMode] = useState<ListCategory>('classic')
   const [listsDropdownOpen, setListsDropdownOpen] = useState(false)
@@ -353,15 +355,17 @@ export default function Home() {
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
 
-  // Submit Record states
+  // Submit Record states (with introduction and description)
   const [recMode, setRecMode] = useState<ListCategory>('classic')
   const [recLevelId, setRecLevelId] = useState<number>(0)
   const [recProgress, setRecProgress] = useState(100)
   const [recVideo, setRecVideo] = useState('')
   const [recEnjoyment, setRecEnjoyment] = useState(8)
+  const [recIntro, setRecIntro] = useState('')
+  const [recDesc, setRecDesc] = useState('')
   const [recNotes, setRecNotes] = useState('')
 
-  // Submit Level states
+  // Submit Level states (with introduction and description)
   const [lvlMode, setLvlMode] = useState<ListCategory>('classic')
   const [lvlTitle, setLvlTitle] = useState('')
   const [lvlCreator, setLvlCreator] = useState('')
@@ -369,6 +373,7 @@ export default function Home() {
   const [lvlGdId, setLvlGdId] = useState('')
   const [lvlVerifyVideo, setLvlVerifyVideo] = useState('')
   const [lvlPoints, setLvlPoints] = useState('250.00')
+  const [lvlIntro, setLvlIntro] = useState('')
   const [lvlDesc, setLvlDesc] = useState('')
   const [lvlPassword, setLvlPassword] = useState('Free Copy')
   const [lvlLength, setLvlLength] = useState('1m:45s')
@@ -404,7 +409,7 @@ export default function Home() {
   // Mod Edit Level Modal states
   const [editingLevel, setEditingLevel] = useState<GoofyLevel | null>(null)
 
-  // Full Level Details View (Pointercrate Style)
+  // Full Level Details View
   const [viewingLevel, setViewingLevel] = useState<GoofyLevel | null>(null)
   const [showHistoryTable, setShowHistoryTable] = useState(true)
 
@@ -634,6 +639,8 @@ export default function Home() {
         progress: recProgress,
         video_url: recVideo.trim(),
         enjoyment: recEnjoyment,
+        introduction: recIntro.trim(),
+        submission_description: recDesc.trim(),
         mod_notes: recNotes.trim(),
         status: 'pending',
       },
@@ -643,6 +650,8 @@ export default function Home() {
       alert('Error: ' + error.message)
     } else {
       setRecVideo('')
+      setRecIntro('')
+      setRecDesc('')
       setRecNotes('')
       setRightDrawer('none')
       refreshAll()
@@ -694,6 +703,7 @@ export default function Home() {
       setLvlVerifier('')
       setLvlGdId('')
       setLvlVerifyVideo('')
+      setLvlIntro('')
       setLvlDesc('')
       setRightDrawer('none')
       refreshAll()
@@ -1020,7 +1030,7 @@ export default function Home() {
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
-  // LEADERBOARD SORTING: STRICTLY BY POINTS DESCENDING (FIRST VICTORS / VERIFIERS FURTHER UP)
+  // LEADERBOARD SORTING: STRICTLY BY POINTS DESCENDING
   const leaderboard: PlayerLeaderboardRow[] = profiles
     .map((prof) => {
       const uLower = prof.username.trim().toLowerCase()
@@ -1217,7 +1227,7 @@ export default function Home() {
         </>
       )}
 
-      {/* TOP HEADER (BIGGER PC UI) */}
+      {/* TOP HEADER */}
       <header className={darkMode ? 'bg-[#09090b]/95 border-b border-orange-500/35 sticky top-0 z-40 backdrop-blur' : 'bg-white/95 border-b border-orange-300 sticky top-0 z-40 backdrop-blur'}>
         <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4 cursor-pointer select-none group" onClick={() => setActiveTab('welcome')}>
@@ -1352,7 +1362,6 @@ export default function Home() {
 
             {[
               { id: 'leaderboard', label: 'Leaderboard' },
-              { id: 'staff', label: 'Staff & Editors' },
               { id: 'minigames', label: 'Minigames' },
               { id: 'forum', label: 'Forum & Bugs' },
             ].map((tab) => (
@@ -1408,7 +1417,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* RIGHT-SIDE SLIDE-OUT DRAWER FOR SUBMIT RECORD / SUBMIT LEVEL */}
+      {/* RIGHT-SIDE SLIDE-OUT DRAWER FOR SUBMIT RECORD / SUBMIT LEVEL (WITH INTRODUCTION & DESCRIPTION) */}
       {rightDrawer !== 'none' && currentUser && (
         <div onClick={() => setRightDrawer('none')} className="fixed inset-0 bg-black/65 z-50 flex justify-end">
           <div
@@ -1451,16 +1460,24 @@ export default function Home() {
                   <input type="number" min={1} max={100} value={recProgress} onChange={(e) => setRecProgress(Number(e.target.value))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm mb-1.5">Video Proof URL (YouTube / Streamable)</label>
+                  <label className="block text-sm mb-1.5">Video Proof URL</label>
                   <input required type="url" placeholder="https://youtube.com/..." value={recVideo} onChange={(e) => setRecVideo(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1.5">Introduction / Hook</label>
+                  <input type="text" placeholder="Short intro or greeting..." value={recIntro} onChange={(e) => setRecIntro(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1.5">Submission Description</label>
+                  <textarea rows={2} placeholder="Describe your completion experience..." value={recDesc} onChange={(e) => setRecDesc(e.target.value)} className={inputClass} />
                 </div>
                 <div>
                   <label className="block text-sm mb-1.5">Enjoyment Rating (1 - 10)</label>
                   <input type="number" min={1} max={10} value={recEnjoyment} onChange={(e) => setRecEnjoyment(Number(e.target.value))} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm mb-1.5">Notes for Moderators</label>
-                  <textarea rows={2} value={recNotes} onChange={(e) => setRecNotes(e.target.value)} className={inputClass} placeholder="Raw footage link or FPS info..." />
+                  <label className="block text-sm mb-1.5">Mod Notes</label>
+                  <input type="text" placeholder="Raw footage link..." value={recNotes} onChange={(e) => setRecNotes(e.target.value)} className={inputClass} />
                 </div>
                 <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl text-base font-bold transition">
                   Send Record Submission
@@ -1490,7 +1507,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm mb-1">Creator(s)</label>
-                    <input required type="text" placeholder="Creator name" value={lvlCreator} onChange={(e) => setLvlCreator(e.target.value)} className={inputClass} />
+                    <input required type="text" placeholder="Creator name" value={lvlCreator} onChange={(e) => setlvlCreator(e.target.value)} className={inputClass} />
                   </div>
                   <div>
                     <label className="block text-sm mb-1">Verifier</label>
@@ -1502,12 +1519,16 @@ export default function Home() {
                   <input required type="url" placeholder="https://youtube.com/watch?v=..." value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm mb-1">Quote / Description</label>
+                  <label className="block text-sm mb-1">Introduction / Overview</label>
+                  <input type="text" placeholder="Brief level intro..." value={lvlIntro} onChange={(e) => setLvlIntro(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Level Description / Quote</label>
                   <input type="text" placeholder='"The End."' value={lvlDesc} onChange={(e) => setLvlDesc(e.target.value)} className={inputClass} />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs mb-1">Points (100%)</label>
+                    <label className="block text-xs mb-1">Points</label>
                     <input type="number" step="0.01" value={lvlPoints} onChange={(e) => setLvlPoints(e.target.value)} className={inputClass} />
                   </div>
                   <div>
@@ -1517,30 +1538,6 @@ export default function Home() {
                   <div>
                     <label className="block text-xs mb-1">Password</label>
                     <input type="text" value={lvlPassword} onChange={(e) => setLvlPassword(e.target.value)} className={inputClass} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs mb-1">Length</label>
-                    <input type="text" value={lvlLength} onChange={(e) => setLvlLength(e.target.value)} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Objects</label>
-                    <input type="number" value={lvlObjects} onChange={(e) => setLvlObjects(e.target.value)} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Version</label>
-                    <input type="text" value={lvlVersion} onChange={(e) => setLvlVersion(e.target.value)} className={inputClass} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs mb-1">Newgrounds Song Name</label>
-                    <input type="text" placeholder="KzX - Stalemate" value={lvlSongName} onChange={(e) => setLvlSongName(e.target.value)} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Newgrounds Song ID</label>
-                    <input type="text" placeholder="482872" value={lvlSongId} onChange={(e) => setLvlSongId(e.target.value)} className={inputClass} />
                   </div>
                 </div>
                 <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl text-base font-bold transition">
@@ -1561,288 +1558,225 @@ export default function Home() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-8 py-10">
-        {/* EXPANDED WELCOME / LANDING PAGE */}
-        {activeTab === 'welcome' && (
-          <div className="space-y-8 animate-panel">
-            <div className={`p-10 sm:p-14 rounded-2xl border text-center space-y-6 ${cardClass}`}>
-              <span className="inline-block bg-orange-500/20 text-orange-500 border border-orange-500/40 px-4 py-1.5 rounded-full text-sm uppercase tracking-wider">
-                Official Geometry Dash Community Demonlist
-              </span>
-              <h1 className="fancy-display text-5xl sm:text-6xl text-orange-500 leading-tight">
-                Welcome to Goofy Levels List
-              </h1>
-              <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-                Track top completions across Classic, Platformer, Impossible, and Spam lists. Compete on the global Stats Viewer leaderboard, spin Goofy Roulette, and climb the ranks!
-              </p>
-              <div className="flex flex-wrap justify-center gap-4 pt-3">
-                <button
-                  onClick={() => {
-                    setSelectedListMode('classic')
-                    setActiveTab('list')
-                  }}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-2xl text-base font-bold transition shadow-xl"
-                >
-                  Browse Classic List
-                </button>
-                <button
-                  onClick={() => setActiveTab('leaderboard')}
-                  className="bg-orange-500/15 border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-8 py-4 rounded-2xl text-base font-bold transition"
-                >
-                  Open Stats Viewer
-                </button>
-              </div>
-            </div>
-
-            {/* LIVE COMMUNITY STATS CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
-              {[
-                { label: 'Ranked Levels', value: approvedLevels.length, sub: 'Across 4 List Categories' },
-                { label: 'Registered Players', value: profiles.length, sub: 'Competing Worldwide' },
-                { label: 'Verified Records', value: approvedSubs.length, sub: 'With Video Proof' },
-                { label: 'List Staff', value: moderators.length, sub: 'Editors & Helpers' },
-              ].map((stat, i) => (
-                <div key={i} className={`p-6 rounded-2xl border text-center space-y-1 ${cardClass}`}>
-                  <p className="fancy-display text-4xl text-orange-500">{stat.value}</p>
-                  <p className="text-base">{stat.label}</p>
-                  <p className="text-xs text-gray-400">{stat.sub}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* POINTERCRATE-STYLE LEVEL DETAILS VIEW (WHEN YOU CLICK ON A LEVEL NAME) */}
-        {activeTab === 'level_detail' && viewingLevel && (
-          <div className="max-w-4xl mx-auto space-y-6 animate-panel">
-            <button
-              onClick={() => setActiveTab('list')}
-              className="bg-orange-500/15 border border-orange-500/40 text-orange-500 px-4 py-2 rounded-xl text-sm hover:bg-orange-500 hover:text-white transition"
-            >
-              ← Back to {listLabels[viewingLevel.mode || 'classic']}
-            </button>
-
-            {/* TOP LEVEL HERO CARD */}
-            <div className={`p-8 rounded-2xl border space-y-6 ${cardClass}`}>
-              <div className="text-center space-y-2 border-b border-orange-500/20 pb-6">
-                <div className="flex items-center justify-center gap-6">
-                  <button
-                    onClick={() => {
-                      const idx = categoryLevels.findIndex((l) => l.id === viewingLevel.id)
-                      if (idx > 0) setViewingLevel(categoryLevels[idx - 1])
-                    }}
-                    className="text-3xl text-orange-500 hover:scale-125 transition"
-                    title="Previous Level"
-                  >
-                    ‹
-                  </button>
-                  <h1 className="fancy-display text-4xl sm:text-5xl text-orange-500">{viewingLevel.title}</h1>
-                  <button
-                    onClick={() => {
-                      const idx = categoryLevels.findIndex((l) => l.id === viewingLevel.id)
-                      if (idx >= 0 && idx < categoryLevels.length - 1) setViewingLevel(categoryLevels[idx + 1])
-                    }}
-                    className="text-3xl text-orange-500 hover:scale-125 transition"
-                    title="Next Level"
-                  >
-                    ›
-                  </button>
-                </div>
-                <p className="text-base text-gray-400">
-                  by <span className="text-orange-400 underline">{viewingLevel.creator}</span>, verified by{' '}
-                  <span className="text-orange-400 underline">{viewingLevel.verifier || 'Unknown'}</span>
-                </p>
-                {viewingLevel.description && (
-                  <p className="text-sm italic text-gray-400 pt-1">"{viewingLevel.description}"</p>
-                )}
-              </div>
-
-              {/* EMBEDDED YOUTUBE PLAYER / THUMBNAIL */}
-              <div className="max-w-2xl mx-auto">
-                {getYouTubeId(viewingLevel.verification_url) ? (
-                  <div className="aspect-video w-full rounded-xl overflow-hidden border-2 border-orange-500/40 shadow-2xl">
-                    <iframe
-                      className="w-full h-full"
-                      src={`https://www.youtube.com/embed/${getYouTubeId(viewingLevel.verification_url)}`}
-                      title={viewingLevel.title}
-                      allowFullScreen
-                    />
-                  </div>
-                ) : viewingLevel.verification_url ? (
-                  <div className="p-8 bg-orange-500/10 border border-orange-500/30 rounded-xl text-center">
-                    <a
-                      href={viewingLevel.verification_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="bg-orange-500 text-white px-6 py-3 rounded-xl text-base inline-block"
-                    >
-                      Watch Verification Video
-                    </a>
-                  </div>
-                ) : null}
-              </div>
-
-              {/* METADATA GRID (MATCHING SCREENSHOT) */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center pt-4 border-t border-orange-500/20">
-                <div>
-                  <p className="text-sm text-orange-500">Level Password</p>
-                  <p className="text-base">{viewingLevel.password || 'Free Copy'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-orange-500">Level ID</p>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(viewingLevel.gd_level_id || '')
-                      showNotice(`Copied Level ID: ${viewingLevel.gd_level_id}`)
-                    }}
-                    className="text-base hover:text-orange-400 underline"
-                    title="Click to copy ID"
-                  >
-                    {viewingLevel.gd_level_id || 'N/A'}
-                  </button>
-                </div>
-                <div>
-                  <p className="text-sm text-orange-500">Level Length</p>
-                  <p className="text-base">{viewingLevel.level_length || '1m:30s'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-orange-500">Object Count</p>
-                  <p className="text-base">{viewingLevel.object_count || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-orange-500">In-Game Difficulty</p>
-                  <p className="text-base">{viewingLevel.difficulty || 'Extreme Demon'}</p>
-                </div>
-              </div>
-
-              <div className="text-center space-y-3 pt-2">
-                <div>
-                  <p className="text-sm text-orange-500">Created In</p>
-                  <p className="text-base">{viewingLevel.game_version || '2.2'}</p>
-                </div>
-
-                {viewingLevel.song_name && (
-                  <div>
-                    <p className="text-sm text-orange-500">Newgrounds Song</p>
-                    <a
-                      href={viewingLevel.song_id ? `https://www.newgrounds.com/audio/listen/${viewingLevel.song_id}` : '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-base text-sky-400 hover:underline"
-                    >
-                      {viewingLevel.song_name} {viewingLevel.song_id ? `(ID ${viewingLevel.song_id})` : ''} ↗
-                    </a>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 max-w-lg mx-auto pt-3">
-                  <div>
-                    <p className="text-sm text-orange-500">Demonlist score (100%)</p>
-                    <p className="text-lg">{Number(viewingLevel.points || 0).toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-orange-500">Demonlist score ({viewingLevel.min_percent || 75}%)</p>
-                    <p className="text-lg">{(Number(viewingLevel.points || 0) * 0.25).toFixed(2)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* POSITION HISTORY CARD */}
-            <div className={`p-6 rounded-2xl border space-y-4 ${cardClass}`}>
-              <div
-                onClick={() => setShowHistoryTable(!showHistoryTable)}
-                className="flex items-center justify-between cursor-pointer"
-              >
-                <h3 className="goofy-title text-2xl text-center flex-1 text-orange-500">Position History</h3>
-                <span className="text-orange-500">{showHistoryTable ? '▲' : '▼'}</span>
-              </div>
-              {showHistoryTable && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-center text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-orange-600 text-white">
-                        <th className="py-2.5 px-4">Date</th>
-                        <th className="py-2.5 px-4">Change</th>
-                        <th className="py-2.5 px-4">New Position</th>
-                        <th className="py-2.5 px-4">Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(viewingLevel.position_history && viewingLevel.position_history.length > 0
-                        ? viewingLevel.position_history
-                        : [{ date: '2026-11-21', change: '-', new_position: categoryLevels.findIndex((l) => l.id === viewingLevel.id) + 1, reason: 'Added to list' }]
-                      ).map((row, idx) => (
-                        <tr key={idx} className="bg-orange-500/15 border-b border-orange-500/20">
-                          <td className="py-2.5 px-4">{row.date}</td>
-                          <td className="py-2.5 px-4">{row.change}</td>
-                          <td className="py-2.5 px-4">{row.new_position}</td>
-                          <td className="py-2.5 px-4">{row.reason}</td>
-                        </tr>
+      {/* MAIN CONTAINER WITH LEFT SIDEBAR FOR STAFF & EDITORS */}
+      <div className="max-w-7xl mx-auto px-8 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* LEFT SIDEBAR: STAFF & EDITORS */}
+        <aside className="lg:col-span-3 space-y-6">
+          <div className={`p-6 rounded-2xl border space-y-4 ${cardClass}`}>
+            <h3 className="goofy-title text-xl text-orange-500 border-b border-orange-500/20 pb-3">List Staff & Editors</h3>
+            
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="text-xs uppercase text-orange-400 font-bold mb-2">Editors ({moderators.filter((m) => m.role === 'editor').length})</p>
+                {moderators.filter((m) => m.role === 'editor').length === 0 ? (
+                  <p className="text-xs text-gray-400">No editors listed.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {moderators
+                      .filter((m) => m.role === 'editor')
+                      .map((m) => (
+                        <div key={m.id} className="flex items-center gap-2.5 bg-orange-500/10 px-3 py-2 rounded-xl border border-orange-500/20">
+                          <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt="" className="w-5 h-3.5 border" />
+                          <span className="truncate">{m.clan ? `[${m.clan}] ` : ''}{m.name}</span>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
 
-            {/* RECORDS CARD */}
-            <div className={`p-6 rounded-2xl border space-y-4 text-center ${cardClass}`}>
-              <h3 className="goofy-title text-2xl text-orange-500">Records</h3>
-              <p className="text-sm text-gray-400 border-b border-orange-500/20 pb-3">
-                {viewingLevel.min_percent || 75}% or better required to qualify
-              </p>
-              {getLevelVictorsAndVerifiers(viewingLevel).length === 0 ? (
-                <p className="text-sm text-gray-400 py-4">No records yet! Be the first to achieve one!</p>
-              ) : (
-                <div className="space-y-2 text-left">
-                  {getLevelVictorsAndVerifiers(viewingLevel).map((v, i) => (
-                    <div key={i} className="flex items-center justify-between bg-orange-500/10 px-4 py-3 rounded-xl text-sm">
-                      <div>
-                        <span className="font-bold">{v.displayName}</span>{' '}
-                        <span className="text-orange-500">({v.role} - {v.progress}%)</span>
-                      </div>
-                      {v.videoUrl && (
-                        <a href={v.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-3.5 py-1.5 rounded-lg text-xs">
-                          Video Proof ↗
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div>
+                <p className="text-xs uppercase text-amber-400 font-bold mb-2">Helpers ({moderators.filter((m) => m.role === 'helper').length})</p>
+                {moderators.filter((m) => m.role === 'helper').length === 0 ? (
+                  <p className="text-xs text-gray-400">No helpers listed.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {moderators
+                      .filter((m) => m.role === 'helper')
+                      .map((m) => (
+                        <div key={m.id} className="flex items-center gap-2.5 bg-orange-500/10 px-3 py-2 rounded-xl border border-orange-500/20">
+                          <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt="" className="w-5 h-3.5 border" />
+                          <span className="truncate">{m.clan ? `[${m.clan}] ` : ''}{m.name}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}
+        </aside>
 
-        {/* POINTERCRATE STATS VIEWER LEADERBOARD */}
-        {activeTab === 'leaderboard' && (
-          <div className="space-y-6 animate-panel">
-            {/* WORLD MAP HEADER BANNER */}
-            <div className={`rounded-2xl border overflow-hidden ${cardClass}`}>
-              <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-6">
-                {/* STYLIZED WORLD MAP SVG WITH ORANGE HIGHLIGHTS */}
-                <svg viewBox="0 0 1000 320" className="w-full h-44 sm:h-56 opacity-80">
-                  <g fill={darkMode ? '#27272a' : '#cbd5e1'} stroke={darkMode ? '#3f3f46' : '#ffffff'} strokeWidth="1.5">
-                    {/* North America */}
-                    <path d="M120,60 L240,55 L275,115 L220,165 L165,175 L130,120 Z" fill="#fb923c" />
-                    {/* Greenland */}
-                    <path d="M295,25 L365,20 L355,65 L300,70 Z" />
-                    {/* South America */}
-                    <path d="M245,190 L305,205 L290,295 L255,305 L240,240 Z" fill="#fdba74" />
-                    {/* Europe */}
-                    <path d="M445,60 L545,50 L565,115 L495,130 L450,115 Z" fill="#f97316" />
-                    {/* Africa */}
-                    <path d="M455,140 L540,140 L565,220 L515,280 L475,235 Z" />
-                    {/* Asia */}
-                    <path d="M565,55 L825,60 L845,155 L710,180 L575,140 Z" fill="#fb923c" />
-                    {/* Oceania */}
-                    <path d="M765,215 L845,215 L850,275 L770,275 Z" fill="#fdba74" />
-                  </g>
-                </svg>
+        {/* RIGHT MAIN CONTENT AREA */}
+        <main className="lg:col-span-9 space-y-8">
+          {/* WELCOME PAGE */}
+          {activeTab === 'welcome' && (
+            <div className="space-y-8 animate-panel">
+              <div className={`p-10 rounded-2xl border text-center space-y-6 ${cardClass}`}>
+                <span className="inline-block bg-orange-500/20 text-orange-500 border border-orange-500/40 px-4 py-1.5 rounded-full text-sm uppercase tracking-wider">
+                  Official Geometry Dash Community Demonlist
+                </span>
+                <h1 className="fancy-display text-4xl sm:text-5xl text-orange-500 leading-tight">
+                  Welcome to Goofy Levels List
+                </h1>
+                <p className="text-base text-gray-400 max-w-xl mx-auto">
+                  Track top completions across Classic, Platformer, Impossible, and Spam lists. Check out our staff team on the left, spin Goofy Roulette, and climb the leaderboard!
+                </p>
+                <div className="flex flex-wrap justify-center gap-4 pt-3">
+                  <button
+                    onClick={() => {
+                      setSelectedListMode('classic')
+                      setActiveTab('list')
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-2xl text-base font-bold transition shadow-xl"
+                  >
+                    Browse Classic List
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('leaderboard')}
+                    className="bg-orange-500/15 border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-8 py-4 rounded-2xl text-base font-bold transition"
+                  >
+                    Open Stats Viewer
+                  </button>
+                </div>
+              </div>
 
-                {/* STATS VIEWER - COUNTRY SELECTOR DROPDOWN */}
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                {[
+                  { label: 'Ranked Levels', value: approvedLevels.length, sub: 'Across 4 List Categories' },
+                  { label: 'Registered Players', value: profiles.length, sub: 'Competing Worldwide' },
+                  { label: 'Verified Records', value: approvedSubs.length, sub: 'With Video Proof' },
+                ].map((stat, i) => (
+                  <div key={i} className={`p-6 rounded-2xl border text-center space-y-1 ${cardClass}`}>
+                    <p className="fancy-display text-4xl text-orange-500">{stat.value}</p>
+                    <p className="text-base">{stat.label}</p>
+                    <p className="text-xs text-gray-400">{stat.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* LEVEL DETAILS VIEW */}
+          {activeTab === 'level_detail' && viewingLevel && (
+            <div className="space-y-6 animate-panel">
+              <button
+                onClick={() => setActiveTab('list')}
+                className="bg-orange-500/15 border border-orange-500/40 text-orange-500 px-4 py-2 rounded-xl text-sm hover:bg-orange-500 hover:text-white transition"
+              >
+                ← Back to {listLabels[viewingLevel.mode || 'classic']}
+              </button>
+
+              <div className={`p-8 rounded-2xl border space-y-6 ${cardClass}`}>
+                <div className="text-center space-y-2 border-b border-orange-500/20 pb-6">
+                  <div className="flex items-center justify-center gap-6">
+                    <button
+                      onClick={() => {
+                        const idx = categoryLevels.findIndex((l) => l.id === viewingLevel.id)
+                        if (idx > 0) setViewingLevel(categoryLevels[idx - 1])
+                      }}
+                      className="text-3xl text-orange-500 hover:scale-125 transition"
+                    >
+                      ‹
+                    </button>
+                    <h1 className="fancy-display text-4xl sm:text-5xl text-orange-500">{viewingLevel.title}</h1>
+                    <button
+                      onClick={() => {
+                        const idx = categoryLevels.findIndex((l) => l.id === viewingLevel.id)
+                        if (idx >= 0 && idx < categoryLevels.length - 1) setViewingLevel(categoryLevels[idx + 1])
+                      }}
+                      className="text-3xl text-orange-500 hover:scale-125 transition"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <p className="text-base text-gray-400">
+                    by <span className="text-orange-400 underline">{viewingLevel.creator}</span>, verified by{' '}
+                    <span className="text-orange-400 underline">{viewingLevel.verifier || 'Unknown'}</span>
+                  </p>
+                  {viewingLevel.description && (
+                    <p className="text-sm italic text-gray-400 pt-1">"{viewingLevel.description}"</p>
+                  )}
+                </div>
+
+                <div className="max-w-2xl mx-auto">
+                  {getYouTubeId(viewingLevel.verification_url) ? (
+                    <div className="aspect-video w-full rounded-xl overflow-hidden border-2 border-orange-500/40 shadow-2xl">
+                      <iframe
+                        className="w-full h-full"
+                        src={`https://www.youtube.com/embed/${getYouTubeId(viewingLevel.verification_url)}`}
+                        title={viewingLevel.title}
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center pt-4 border-t border-orange-500/20">
+                  <div>
+                    <p className="text-sm text-orange-500">Level Password</p>
+                    <p className="text-base">{viewingLevel.password || 'Free Copy'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-orange-500">Level ID</p>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(viewingLevel.gd_level_id || '')
+                        showNotice(`Copied ID: ${viewingLevel.gd_level_id}`)
+                      }}
+                      className="text-base hover:text-orange-400 underline"
+                    >
+                      {viewingLevel.gd_level_id || 'N/A'}
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-sm text-orange-500">Level Length</p>
+                    <p className="text-base">{viewingLevel.level_length || '1m:30s'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-orange-500">Object Count</p>
+                    <p className="text-base">{viewingLevel.object_count || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-orange-500">In-Game Difficulty</p>
+                    <p className="text-base">{viewingLevel.difficulty || 'Extreme Demon'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* RECORDS */}
+              <div className={`p-6 rounded-2xl border space-y-4 text-center ${cardClass}`}>
+                <h3 className="goofy-title text-2xl text-orange-500">Records</h3>
+                <p className="text-sm text-gray-400 border-b border-orange-500/20 pb-3">
+                  {viewingLevel.min_percent || 75}% or better required to qualify
+                </p>
+                {getLevelVictorsAndVerifiers(viewingLevel).length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4">No records yet! Be the first to achieve one!</p>
+                ) : (
+                  <div className="space-y-2 text-left">
+                    {getLevelVictorsAndVerifiers(viewingLevel).map((v, i) => (
+                      <div key={i} className="flex items-center justify-between bg-orange-500/10 px-4 py-3 rounded-xl text-sm">
+                        <div>
+                          <span className="font-bold">{v.displayName}</span>{' '}
+                          <span className="text-orange-500">({v.role} - {v.progress}%)</span>
+                        </div>
+                        {v.videoUrl && (
+                          <a href={v.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-3.5 py-1.5 rounded-lg text-xs">
+                            Video Proof ↗
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* POINTERCRATE STATS VIEWER LEADERBOARD */}
+          {activeTab === 'leaderboard' && (
+            <div className="space-y-6 animate-panel">
+              <div className={`rounded-2xl border overflow-hidden ${cardClass}`}>
+                <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-6 text-center space-y-3">
                   <h2 className="fancy-display text-2xl sm:text-3xl text-orange-500">Stats Viewer -</h2>
                   <select
                     value={selectedCountryFilter}
@@ -1850,31 +1784,21 @@ export default function Home() {
                       setSelectedCountryFilter(e.target.value)
                       setLbPage(0)
                     }}
-                    className={`border-b-2 border-orange-500 bg-transparent text-xl sm:text-2xl font-bold px-3 py-1 focus:outline-none ${
-                      darkMode ? 'text-white' : 'text-gray-900'
-                    }`}
+                    className={`border-b-2 border-orange-500 bg-transparent text-xl font-bold px-3 py-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}
                   >
-                    <option value="ALL" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>
-                      Global (All Countries)
-                    </option>
+                    <option value="ALL" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>Global (All Countries)</option>
                     {COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.code} className={darkMode ? 'bg-[#121216]' : 'bg-white'}>
-                        {c.name}
-                      </option>
+                      <option key={c.code} value={c.code} className={darkMode ? 'bg-[#121216]' : 'bg-white'}>{c.name}</option>
                     ))}
                   </select>
                 </div>
-              </div>
 
-              {/* TWO-COLUMN STATS VIEWER BODY (MATCHING SCREENSHOT) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 border-t border-orange-500/25">
-                {/* LEFT COLUMN: SEARCH + SCROLLABLE RANKED PLAYER LIST + PREV/NEXT */}
-                <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-orange-500/25 p-5 flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="relative">
+                <div className="grid grid-cols-1 lg:grid-cols-12 border-t border-orange-500/25">
+                  <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-orange-500/25 p-5 flex flex-col justify-between space-y-4">
+                    <div className="space-y-3">
                       <input
                         type="text"
-                        placeholder="Enter to search..."
+                        placeholder="Search player..."
                         value={lbSearch}
                         onChange={(e) => {
                           setLbSearch(e.target.value)
@@ -1882,21 +1806,8 @@ export default function Home() {
                         }}
                         className={inputClass}
                       />
-                      {lbSearch && (
-                        <button
-                          onClick={() => setLbSearch('')}
-                          className="absolute right-3 top-3 text-xs text-gray-400 hover:text-orange-500"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="border border-orange-500/30 rounded-xl h-80 overflow-y-auto divide-y divide-orange-500/15">
-                      {pagedLeaderboard.length === 0 ? (
-                        <p className="p-4 text-sm text-gray-400 text-center">No players found.</p>
-                      ) : (
-                        pagedLeaderboard.map((player) => {
+                      <div className="border border-orange-500/30 rounded-xl h-80 overflow-y-auto divide-y divide-orange-500/15">
+                        {pagedLeaderboard.map((player) => {
                           const globalRank = leaderboard.findIndex((p) => p.id === player.id) + 1
                           const isSelected = activeStatsPlayer?.id === player.id
                           return (
@@ -1904,690 +1815,136 @@ export default function Home() {
                               key={player.id}
                               onClick={() => setSelectedStatsPlayerId(player.id)}
                               className={`w-full text-left px-4 py-3 flex items-center justify-between text-sm transition ${
-                                isSelected
-                                  ? 'bg-orange-500 text-white'
-                                  : 'hover:bg-orange-500/15'
+                                isSelected ? 'bg-orange-500 text-white' : 'hover:bg-orange-500/15'
                               }`}
                             >
                               <div className="flex items-center gap-2.5 truncate">
-                                <span className="font-mono w-8">
-                                  {player.totalPoints > 0 ? `#${globalRank}` : '-'}
-                                </span>
-                                <img
-                                  src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`}
-                                  alt=""
-                                  className="w-5 h-3.5 border"
-                                />
+                                <span className="font-mono w-8">#{globalRank}</span>
+                                <img src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`} alt="" className="w-5 h-3.5 border" />
                                 <span className="truncate">{player.display_name}</span>
                               </div>
                               <span className="text-xs opacity-90">{player.totalPoints.toFixed(2)}</span>
                             </button>
                           )
-                        })
-                      )}
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-around pt-1 text-sm font-bold uppercase">
+                      <button disabled={lbPage === 0} onClick={() => setLbPage((p) => Math.max(0, p - 1))} className="disabled:opacity-35">Previous</button>
+                      <button disabled={(lbPage + 1) * PAGE_SIZE >= filteredLeaderboard.length} onClick={() => setLbPage((p) => p + 1)} className="disabled:opacity-35">Next</button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-around pt-1 text-sm font-bold uppercase tracking-wider">
-                    <button
-                      disabled={lbPage === 0}
-                      onClick={() => setLbPage((p) => Math.max(0, p - 1))}
-                      className="disabled:opacity-35 hover:text-orange-500 transition"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      disabled={(lbPage + 1) * PAGE_SIZE >= filteredLeaderboard.length}
-                      onClick={() => setLbPage((p) => p + 1)}
-                      className="disabled:opacity-35 hover:text-orange-500 transition"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-
-                {/* RIGHT COLUMN: SELECTED PLAYER DETAILED STATS PANEL */}
-                <div className="lg:col-span-8 p-8 flex flex-col justify-center">
-                  {activeStatsPlayer ? (
-                    <div className="space-y-6 text-center">
-                      <div className="flex items-center justify-center gap-4">
-                        <img
-                          src={`https://flagcdn.com/w40/${activeStatsPlayer.country.toLowerCase()}.png`}
-                          alt=""
-                          className="w-9 h-6 border shadow"
-                        />
-                        <button
-                          onClick={() => {
-                            setViewingPlayer(activeStatsPlayer)
-                            setActiveTab('profile')
-                          }}
-                          className="fancy-display text-3xl sm:text-4xl text-orange-500 hover:underline"
-                        >
-                          {activeStatsPlayer.display_name}
-                        </button>
-                        <img
-                          src={`https://flagcdn.com/w40/${activeStatsPlayer.country.toLowerCase()}.png`}
-                          alt=""
-                          className="w-9 h-6 border shadow"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-6 max-w-xl mx-auto">
-                        <div>
-                          <p className="text-sm text-orange-500">Demonlist rank</p>
-                          <p className="text-2xl">
-                            {activeStatsPlayer.totalPoints > 0
-                              ? leaderboard.findIndex((p) => p.id === activeStatsPlayer.id) + 1
-                              : 'Unranked'}
-                          </p>
+                  <div className="lg:col-span-8 p-8 flex flex-col justify-center">
+                    {activeStatsPlayer && (
+                      <div className="space-y-6 text-center">
+                        <div className="flex items-center justify-center gap-4">
+                          <button
+                            onClick={() => {
+                              setViewingPlayer(activeStatsPlayer)
+                              setActiveTab('profile')
+                            }}
+                            className="fancy-display text-3xl text-orange-500 hover:underline"
+                          >
+                            {activeStatsPlayer.display_name}
+                          </button>
                         </div>
-                        <div>
-                          <p className="text-sm text-orange-500">Demonlist score</p>
-                          <p className="text-2xl">{activeStatsPlayer.totalPoints.toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-orange-500">Demonlist stats</p>
-                          <p className="text-base">{activeStatsPlayer.completedCount} Completed</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-orange-500">Hardest demon</p>
-                          <p className="text-base">{activeStatsPlayer.hardestLevel?.title || 'None'}</p>
-                        </div>
-                      </div>
-
-                      {/* DEMONS COMPLETED */}
-                      <div className="space-y-1.5 pt-2">
-                        <p className="text-base text-orange-500">Demons completed</p>
-                        <p className="text-sm text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                          {activeStatsPlayer.entries.filter((e) => e.progress === 100).length > 0
-                            ? activeStatsPlayer.entries
-                                .filter((e) => e.progress === 100)
-                                .map((e) => e.level.title)
-                                .join(' - ')
-                            : 'None'}
-                        </p>
-                      </div>
-
-                      {/* DEMONS CREATED & VERIFIED */}
-                      <div className="grid grid-cols-2 gap-6 max-w-xl mx-auto pt-2">
-                        <div>
-                          <p className="text-sm text-orange-500">Demons created</p>
-                          <p className="text-sm text-gray-400">
-                            {approvedLevels
-                              .filter((l) => l.creator.toLowerCase().includes(activeStatsPlayer.display_name.toLowerCase()))
-                              .map((l) => l.title)
-                              .join(', ') || 'None'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-orange-500">Demons verified</p>
-                          <p className="text-sm text-gray-400">
-                            {activeStatsPlayer.entries
-                              .filter((e) => e.role === 'Verifier')
-                              .map((e) => e.level.title)
-                              .join(', ') || 'None'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* PROGRESS ON */}
-                      <div className="pt-2">
-                        <p className="text-sm text-orange-500">Progress on</p>
-                        <p className="text-sm text-gray-400">
-                          {activeStatsPlayer.entries
-                            .filter((e) => e.progress < 100)
-                            .map((e) => `${e.level.title} (${e.progress}%)`)
-                            .join(' - ') || 'None'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-center text-gray-400">Select a player from the left list to inspect stats.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STAFF & EDITORS PUBLIC ROSTER TAB */}
-        {activeTab === 'staff' && (
-          <div className="max-w-4xl mx-auto space-y-6 animate-panel">
-            <div className={`p-8 rounded-2xl border space-y-6 ${cardClass}`}>
-              <div className="border-b border-orange-500/25 pb-4">
-                <h1 className="fancy-display text-4xl text-orange-500">List Editors & Helpers</h1>
-                <p className="text-sm text-gray-400 mt-1">Official GLL staff team managing placements and record verifications.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <h2 className="goofy-title text-2xl text-orange-500">List Editors ({moderators.filter((m) => m.role === 'editor').length})</h2>
-                  {moderators.filter((m) => m.role === 'editor').length === 0 ? (
-                    <p className="text-sm text-gray-400">No editors listed yet.</p>
-                  ) : (
-                    moderators
-                      .filter((m) => m.role === 'editor')
-                      .map((m) => (
-                        <div key={m.id} className="flex items-center justify-between bg-orange-500/10 border border-orange-500/30 p-4 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt="" className="w-6 h-4 border" />
-                            <div>
-                              <p className="text-base">{m.clan ? `[${m.clan}] ` : ''}{m.name}</p>
-                              <p className="text-xs text-orange-400 uppercase">List Editor</p>
-                            </div>
+                        <div className="grid grid-cols-2 gap-6 max-w-xl mx-auto">
+                          <div>
+                            <p className="text-sm text-orange-500">Demonlist rank</p>
+                            <p className="text-2xl">#{leaderboard.findIndex((p) => p.id === activeStatsPlayer.id) + 1}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-orange-500">Demonlist score</p>
+                            <p className="text-2xl">{activeStatsPlayer.totalPoints.toFixed(2)}</p>
                           </div>
                         </div>
-                      ))
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <h2 className="goofy-title text-2xl text-orange-500">List Helpers ({moderators.filter((m) => m.role === 'helper').length})</h2>
-                  {moderators.filter((m) => m.role === 'helper').length === 0 ? (
-                    <p className="text-sm text-gray-400">No helpers listed yet.</p>
-                  ) : (
-                    moderators
-                      .filter((m) => m.role === 'helper')
-                      .map((m) => (
-                        <div key={m.id} className="flex items-center justify-between bg-orange-500/10 border border-orange-500/30 p-4 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt="" className="w-6 h-4 border" />
-                            <div>
-                              <p className="text-base">{m.clan ? `[${m.clan}] ` : ''}{m.name}</p>
-                              <p className="text-xs text-amber-400 uppercase">List Helper</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* LOGIN TAB */}
-        {activeTab === 'login' && (
-          <div className={`max-w-md mx-auto p-8 rounded-2xl border space-y-5 animate-panel ${cardClass}`}>
-            <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">GLL Login</h2>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">Email</label>
-                <input required type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Password</label>
-                <input required type="password" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className={inputClass} />
-              </div>
-              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition">
-                LOGIN
-              </button>
-            </form>
-            <p className="text-sm text-center text-gray-400">
-              Need an account?{' '}
-              <button onClick={() => setActiveTab('register')} className="text-orange-500 underline">Register here</button>
-            </p>
-          </div>
-        )}
-
-        {/* REGISTER TAB */}
-        {activeTab === 'register' && (
-          <div className={`max-w-md mx-auto p-8 rounded-2xl border space-y-5 animate-panel ${cardClass}`}>
-            <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">GLL Register</h2>
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div>
-                <label className="block text-sm mb-1">Username (lowercase, no spaces)</label>
-                <input required type="text" placeholder="e.g. finniscrazyy" value={regUsername} onChange={(e) => setRegUsername(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Display Name</label>
-                <input required type="text" placeholder="e.g. FinnIsntCrazyy" value={regDisplay} onChange={(e) => setRegDisplay(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Country</label>
-                <select value={regCountry} onChange={(e) => setRegCountry(e.target.value)} className={inputClass}>
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Email</label>
-                <input required type="email" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Password (min 6 chars)</label>
-                <input required minLength={6} type="password" value={regPass} onChange={(e) => setRegPass(e.target.value)} className={inputClass} />
-              </div>
-              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition">
-                REGISTER
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* PLAYER PROFILE PAGE (NO AI AVATARS) */}
-        {activeTab === 'profile' && viewingPlayer && (
-          <div className={`max-w-4xl mx-auto rounded-2xl border overflow-hidden space-y-6 animate-panel ${cardClass}`}>
-            <div className="relative h-52 sm:h-60 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
-              {viewingPlayer.banner_url ? (
-                <img src={viewingPlayer.banner_url} alt="" className="w-full h-full object-cover opacity-85" />
-              ) : (
-                <div className="absolute inset-0 bg-orange-500/25 flex items-center justify-center">
-                  <span className="fancy-display text-4xl text-white/40 uppercase tracking-widest">{viewingPlayer.display_name}</span>
-                </div>
-              )}
-              <div className="absolute top-4 left-4">
-                <button
-                  onClick={() => setActiveTab('leaderboard')}
-                  className="text-sm bg-black/55 text-white px-4 py-2 rounded-xl hover:bg-black/80 backdrop-blur transition"
-                >
-                  ← Back to Leaderboard
-                </button>
-              </div>
-            </div>
-
-            <div className="px-8 pb-8 space-y-6 -mt-16 relative z-10">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                <div className="flex items-end gap-4">
-                  <div className="relative">
-                    {renderAvatar(viewingPlayer, 'w-24 h-24 text-3xl shadow-xl')}
-                    <img
-                      src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
-                      alt=""
-                      className="absolute -bottom-1 -right-1 w-8 h-5 object-cover border-2 border-white rounded shadow"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <h2 className="fancy-display text-3xl text-white drop-shadow">{viewingPlayer.display_name}</h2>
-                      <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5 rounded-full uppercase font-bold">
-                        {viewingPlayer.title_badge || 'Member'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-orange-200">
-                      @{viewingPlayer.username} • Rank #{leaderboard.findIndex((p) => p.id === viewingPlayer.id) + 1}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right bg-orange-500/20 backdrop-blur border border-orange-500/40 px-6 py-3.5 rounded-2xl shadow-lg">
-                  <p className="fancy-display text-3xl text-orange-400">{viewingPlayer.totalPoints.toFixed(2)} pts</p>
-                  <p className="text-sm text-gray-300">{viewingPlayer.completedCount} Completions</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl space-y-2">
-                  <p className="goofy-title text-lg text-orange-500">Social Links</p>
-                  <p className="text-gray-400">YouTube: {viewingPlayer.youtube || 'None'}</p>
-                  <p className="text-gray-400">Discord: {viewingPlayer.discord || 'None'}</p>
-                  <p className="text-gray-400">Twitter: {viewingPlayer.twitter || 'None'}</p>
-                </div>
-                <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl space-y-2">
-                  <p className="goofy-title text-lg text-orange-500">Player Bio</p>
-                  <p className="text-gray-400 italic">{viewingPlayer.bio || 'No bio description provided.'}</p>
-                </div>
-              </div>
-
-              {currentUser && currentUser.id === viewingPlayer.id && (
-                <form onSubmit={handleProfileSave} className="border-t border-orange-500/25 pt-6 space-y-4">
-                  <h3 className="fancy-display text-2xl text-orange-500">Edit Your Profile</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm mb-1">Display Name</label>
-                      <input type="text" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Country</label>
-                      <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
-                        {COUNTRIES.map((c) => (
-                          <option key={c.code} value={c.code}>{c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Title Badge</label>
-                      <input type="text" value={editBadge} onChange={(e) => setEditBadge(e.target.value)} className={inputClass} />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm mb-1">Profile Bio</label>
-                      <input type="text" value={editBio} onChange={(e) => setEditBio(e.target.value)} className={inputClass} />
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Custom Avatar URL</label>
-                      <input type="url" value={editPfp} onChange={(e) => setEditPfp(e.target.value)} className={inputClass} placeholder="https://..." />
-                    </div>
-                    <div>
-                      <label className="block text-sm mb-1">Banner Image URL</label>
-                      <input type="url" value={editBanner} onChange={(e) => setEditBanner(e.target.value)} className={inputClass} placeholder="https://..." />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <input type="text" placeholder="YouTube Handle" value={editYoutube} onChange={(e) => setEditYoutube(e.target.value)} className={inputClass} />
-                    <input type="text" placeholder="Discord Tag" value={editDiscord} onChange={(e) => setEditDiscord(e.target.value)} className={inputClass} />
-                    <input type="text" placeholder="Twitter / X" value={editTwitter} onChange={(e) => setEditTwitter(e.target.value)} className={inputClass} />
-                  </div>
-                  <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-3 rounded-xl transition">
-                    Save Profile Settings
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* MINIGAMES TAB */}
-        {activeTab === 'minigames' && (
-          <div className="max-w-4xl mx-auto space-y-6 animate-panel">
-            <div className={`p-8 rounded-2xl border space-y-5 ${cardClass}`}>
-              <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">Goofy Roulette</h2>
-              {rouletteLevel ? (
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                  {getYouTubeThumbnail(rouletteLevel.verification_url) && (
-                    <a href={rouletteLevel.verification_url || '#'} target="_blank" rel="noreferrer" className="shrink-0">
-                      <img
-                        src={getYouTubeThumbnail(rouletteLevel.verification_url)}
-                        alt=""
-                        className="w-64 h-36 object-cover rounded-xl border-2 border-orange-400"
-                      />
-                    </a>
-                  )}
-                  <div className="flex-1 space-y-3 w-full">
-                    <div>
-                      <h3 className="goofy-title text-2xl">{rouletteLevel.title}</h3>
-                      <p className="text-sm text-gray-400">By {rouletteLevel.creator} - Verified by {rouletteLevel.verifier || 'Unknown'}</p>
-                      <p className="text-base text-orange-500 mt-1">{Number(rouletteLevel.points || 0).toFixed(2)} Points</p>
-                    </div>
-                    <div className="bg-orange-500/10 border border-orange-500/30 p-4 rounded-xl text-sm space-y-2">
-                      <p className="text-orange-500">Required Target: At least {rouletteTargetPct}%</p>
-                      <div className="flex items-center gap-3">
-                        <span>Achieved Percentage:</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={100}
-                          value={rouletteAchievedPct}
-                          onChange={(e) => setRouletteAchievedPct(Number(e.target.value))}
-                          className={`w-28 px-3 py-1.5 ${inputClass}`}
-                        />
                       </div>
-                      <p className="text-gray-400">{rouletteMessage}</p>
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={handleRouletteDone} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm transition">
-                        Done (Next Level)
-                      </button>
-                      <button onClick={startRouletteChallenge} className="bg-red-600 text-white px-6 py-2.5 rounded-xl text-sm transition">
-                        Give Up
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">No levels available for roulette.</p>
-              )}
-            </div>
-
-            <div className={`p-8 rounded-2xl border text-center space-y-6 ${cardClass}`}>
-              <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">Goofy Gacha Packs</h2>
-              <div className="flex justify-center gap-3">
-                {(['standard', 'premium', 'god'] as const).map((pk) => (
-                  <button
-                    key={pk}
-                    onClick={() => setGachaPack(pk)}
-                    className={`px-5 py-2.5 rounded-xl text-sm uppercase font-bold border transition ${
-                      gachaPack === pk ? 'bg-orange-500 text-white border-orange-500' : 'bg-orange-500/10 border-orange-500/30 text-orange-500'
-                    }`}
-                  >
-                    {pk} Pack
-                  </button>
-                ))}
-              </div>
-
-              <div className="p-8 bg-orange-500/10 border border-orange-500/30 rounded-2xl flex flex-col items-center justify-center min-h-[200px]">
-                {gachaAnimating ? (
-                  <div className="animate-spin rounded-full h-14 w-14 border-4 border-orange-500 border-t-transparent"></div>
-                ) : gachaRolledLevel ? (
-                  <div className="space-y-3 animate-panel">
-                    {getYouTubeThumbnail(gachaRolledLevel.verification_url) && (
-                      <img
-                        src={getYouTubeThumbnail(gachaRolledLevel.verification_url)}
-                        alt=""
-                        className="w-56 h-32 object-cover rounded-xl border border-orange-400 mx-auto"
-                      />
                     )}
-                    <div>
-                      <h3 className="goofy-title text-2xl">{gachaRolledLevel.title}</h3>
-                      <p className="text-sm text-gray-400">By {gachaRolledLevel.creator} - {gachaRolledLevel.points} pts</p>
-                      <span className="inline-block mt-2 bg-orange-500 text-white text-xs px-4 py-1 rounded-full">
-                        Saved to Inventory
-                      </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MINIGAMES TAB */}
+          {activeTab === 'minigames' && (
+            <div className="space-y-6 animate-panel">
+              <div className={`p-8 rounded-2xl border space-y-5 ${cardClass}`}>
+                <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">Goofy Roulette</h2>
+                {rouletteLevel ? (
+                  <div className="flex flex-col md:flex-row items-center gap-6">
+                    {getYouTubeThumbnail(rouletteLevel.verification_url) && (
+                      <img src={getYouTubeThumbnail(rouletteLevel.verification_url)} alt="" className="w-56 h-32 object-cover rounded-xl border" />
+                    )}
+                    <div className="flex-1 space-y-3 w-full">
+                      <h3 className="goofy-title text-2xl">{rouletteLevel.title}</h3>
+                      <p className="text-sm text-orange-500">{rouletteLevel.points} Points</p>
+                      <button onClick={handleRouletteDone} className="bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm">Next Level</button>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-base text-gray-400">
-                    {cooldownRemainingMs > 0
-                      ? `Cooldown active. Next roll in ${formatCooldown(cooldownRemainingMs)}.`
-                      : `Ready to open ${gachaPack} pack.`}
-                  </p>
-                )}
+                ) : null}
               </div>
-
-              <button
-                onClick={spinGacha}
-                disabled={gachaAnimating || cooldownRemainingMs > 0}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl text-base transition disabled:opacity-50"
-              >
-                {cooldownRemainingMs > 0 ? `Cooldown: ${formatCooldown(cooldownRemainingMs)}` : `Open ${gachaPack.toUpperCase()} Pack`}
-              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* FORUM & BUG REPORTS TAB */}
-        {activeTab === 'forum' && (
-          <div className="max-w-4xl mx-auto space-y-6 animate-panel">
-            <div className={`p-8 rounded-2xl border space-y-4 ${cardClass}`}>
-              <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">Community Forum & Bug Reports</h2>
-              <form onSubmit={handleCreateForumPost} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* FORUM TAB */}
+          {activeTab === 'forum' && (
+            <div className="space-y-6 animate-panel">
+              <div className={`p-8 rounded-2xl border space-y-4 ${cardClass}`}>
+                <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/20 pb-3">Forum & Bugs</h2>
+                <form onSubmit={handleCreateForumPost} className="space-y-3">
                   <select value={postCategory} onChange={(e) => setPostCategory(e.target.value as any)} className={inputClass}>
                     <option value="forum">Forum Discussion</option>
                     <option value="bug">Bug Report</option>
                   </select>
-                  <input
-                    required
-                    type="text"
-                    placeholder="Title..."
-                    value={postTitle}
-                    onChange={(e) => setPostTitle(e.target.value)}
-                    className={`sm:col-span-2 ${inputClass}`}
-                  />
-                </div>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Write your message or bug description..."
-                  value={postContent}
-                  onChange={(e) => setPostContent(e.target.value)}
-                  className={inputClass}
-                />
-                <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-6 py-3 rounded-xl transition">
-                  Submit Post
-                </button>
-              </form>
-            </div>
-
-            <div className="space-y-4">
-              {forumPosts.map((post) => (
-                <div key={post.id} className={`p-6 rounded-2xl border space-y-2 ${cardClass}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase px-2.5 py-0.5 rounded bg-orange-500/20 text-orange-500 border border-orange-500/40">
-                        {post.category}
-                      </span>
-                      {post.is_flagged && (
-                        <span className="text-xs uppercase px-2.5 py-0.5 rounded bg-red-500/20 text-red-500 border border-red-500/40">
-                          Flagged by Auto-Mod
-                        </span>
-                      )}
-                    </div>
-                    {isMod && (
-                      <button onClick={() => handleDeleteForumPost(post.id)} className="text-sm text-red-500 hover:underline">
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                  <h3 className="goofy-title text-2xl">{post.title}</h3>
-                  <p className="text-sm text-gray-400">{post.content}</p>
-                  <p className="text-xs text-orange-500">By {post.author_display}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* EXPANDED MODERATOR PANEL */}
-        {activeTab === 'mod' && isMod && (
-          <div className={`max-w-5xl mx-auto p-8 rounded-2xl border space-y-8 animate-panel ${cardClass}`}>
-            <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/25 pb-3">Expanded Moderator Panel</h2>
-
-            {/* PENDING LEVEL APPROVALS */}
-            <div className="space-y-3">
-              <h3 className="goofy-title text-2xl text-orange-500">Pending Level Approvals ({pendingLevels.length})</h3>
-              {pendingLevels.length === 0 ? (
-                <p className="text-sm text-gray-400">No pending level submissions.</p>
-              ) : (
-                pendingLevels.map((lvl) => (
-                  <div key={lvl.id} className="p-4 bg-orange-500/10 rounded-xl flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <div>
-                      <p className="text-base">{lvl.title} by {lvl.creator} <span className="text-orange-400">[{lvl.mode || 'classic'}]</span></p>
-                      <p className="text-gray-400">Points: {lvl.points} | GD ID: {lvl.gd_level_id || 'N/A'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {lvl.verification_url && (
-                        <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="bg-orange-500/20 text-orange-500 border border-orange-500/40 px-3 py-1.5 rounded-lg">
-                          Video Proof
-                        </a>
-                      )}
-                      <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-4 py-1.5 rounded-lg">Approve</button>
-                      <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-4 py-1.5 rounded-lg">Reject</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* PENDING RECORD SUBMISSIONS */}
-            <div className="space-y-3 border-t border-orange-500/25 pt-5">
-              <h3 className="goofy-title text-2xl text-orange-500">Pending Record Submissions ({pendingSubs.length})</h3>
-              {pendingSubs.length === 0 ? (
-                <p className="text-sm text-gray-400">No pending record submissions.</p>
-              ) : (
-                pendingSubs.map((sub) => (
-                  <div key={sub.id} className="p-4 bg-orange-500/10 rounded-xl flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <div>
-                      <p className="text-base">{sub.player_name} - {sub.progress}% on {sub.level_title}</p>
-                      {sub.mod_notes && <p className="text-xs text-gray-400">Note: {sub.mod_notes}</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {sub.video_url && (
-                        <a href={sub.video_url} target="_blank" rel="noreferrer" className="bg-orange-500/20 text-orange-500 border border-orange-500/40 px-3 py-1.5 rounded-lg">
-                          Video Proof
-                        </a>
-                      )}
-                      <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-4 py-1.5 rounded-lg">Approve</button>
-                      <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-4 py-1.5 rounded-lg">Reject</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* BULK LEVEL POINT SCALER */}
-            <div className="border-t border-orange-500/25 pt-5 space-y-3">
-              <h3 className="goofy-title text-2xl text-orange-500">Global Point Rebalancer</h3>
-              <div className="flex items-center gap-3 max-w-md">
-                <input
-                  type="number"
-                  step="0.05"
-                  value={bulkPointMultiplier}
-                  onChange={(e) => setBulkPointMultiplier(e.target.value)}
-                  className={inputClass}
-                />
-                <button onClick={handleBulkScalePoints} className="bg-orange-500 text-white px-5 py-2.5 rounded-xl text-sm shrink-0">
-                  Scale All Points
-                </button>
+                  <input required type="text" placeholder="Title..." value={postTitle} onChange={(e) => setPostTitle(e.target.value)} className={inputClass} />
+                  <textarea required rows={3} placeholder="Message..." value={postContent} onChange={(e) => setPostContent(e.target.value)} className={inputClass} />
+                  <button type="submit" className="bg-orange-500 text-white text-sm px-6 py-3 rounded-xl">Submit Post</button>
+                </form>
               </div>
             </div>
+          )}
 
-            {/* ISSUE USER WARNING */}
-            <div className="border-t border-orange-500/25 pt-5 space-y-3">
-              <h3 className="goofy-title text-2xl text-orange-500">Issue User Warning</h3>
-              <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="text" placeholder="Username" value={warnTargetUser} onChange={(e) => setWarnTargetUser(e.target.value)} className={inputClass} />
-                <input type="text" placeholder="Reason" value={warnReason} onChange={(e) => setWarnReason(e.target.value)} className={inputClass} />
-                <button type="submit" className="bg-red-600 text-white text-sm rounded-xl py-2.5">Issue Warning</button>
-              </form>
-            </div>
-
-            {/* MANAGE STAFF MEMBERS (EDITORS & HELPERS) */}
-            <div className="border-t border-orange-500/25 pt-5 space-y-3">
-              <h3 className="goofy-title text-2xl text-orange-500">Manage Staff Members (Editors & Helpers)</h3>
-              <form onSubmit={handleAddStaff} className="grid grid-cols-1 sm:grid-cols-6 gap-3">
-                <input required type="text" placeholder="Name" value={modName} onChange={(e) => setModName(e.target.value)} className={`sm:col-span-2 ${inputClass}`} />
-                <input type="text" placeholder="Clan" value={modClan} onChange={(e) => setModClan(e.target.value)} className={inputClass} />
-                <select value={modCountry} onChange={(e) => setModCountry(e.target.value)} className={`sm:col-span-2 ${inputClass}`}>
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
-                <select value={modRole} onChange={(e) => setModRole(e.target.value as any)} className={inputClass}>
-                  <option value="editor">Editor</option>
-                  <option value="helper">Helper</option>
-                </select>
-                <button type="submit" className="sm:col-span-6 bg-orange-500 text-white text-sm py-3 rounded-xl">Add Staff Member</button>
-              </form>
-
-              <div className="space-y-2 pt-2">
-                {moderators.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between bg-orange-500/10 px-4 py-2.5 rounded-xl text-sm">
-                    <span>{m.clan ? `[${m.clan}] ` : ''}{m.name} ({m.role})</span>
-                    <button onClick={() => handleRemoveStaff(m.id)} className="text-red-500 hover:underline">Remove</button>
+          {/* MOD PANEL */}
+          {activeTab === 'mod' && isMod && (
+            <div className={`p-8 rounded-2xl border space-y-6 animate-panel ${cardClass}`}>
+              <h2 className="fancy-display text-3xl text-orange-500 border-b border-orange-500/25 pb-3">Mod Panel</h2>
+              <div className="space-y-3">
+                <h3 className="goofy-title text-xl text-orange-500">Pending Levels ({pendingLevels.length})</h3>
+                {pendingLevels.map((lvl) => (
+                  <div key={lvl.id} className="p-3 bg-orange-500/10 rounded-xl flex justify-between text-sm">
+                    <span>{lvl.title} by {lvl.creator}</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-3 py-1 rounded">Approve</button>
+                      <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* LEVEL LIST VIEW (CLASSIC / PLATFORMER / IMPOSSIBLE / SPAM) */}
-        {activeTab === 'list' && (
-          <div className="space-y-6 animate-panel">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="fancy-display text-4xl sm:text-5xl text-orange-500">{listLabels[selectedListMode]}</h1>
-                <p className="text-sm text-gray-400">Click any level card to open full stats, song info, and position history.</p>
-              </div>
-              <input
-                type="text"
-                placeholder="Search level, creator, or GD ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={`${inputClass} w-72`}
-              />
-            </div>
-
-            <div className="space-y-4">
-              {shownLevels.length === 0 ? (
-                <div className={`p-10 rounded-2xl border text-center text-gray-400 ${cardClass}`}>
-                  No levels in {listLabels[selectedListMode]} yet.
+          {/* LEVEL LIST VIEW */}
+          {activeTab === 'list' && (
+            <div className="space-y-6 animate-panel">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h1 className="fancy-display text-4xl sm:text-5xl text-orange-500">{listLabels[selectedListMode]}</h1>
+                  <p className="text-sm text-gray-400">Click any level card to open full stats and records.</p>
                 </div>
-              ) : (
-                shownLevels.map((lvl, index) => {
+                <input
+                  type="text"
+                  placeholder="Search level..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className={`${inputClass} w-72`}
+                />
+              </div>
+
+              <div className="space-y-4">
+                {shownLevels.map((lvl, index) => {
                   const thumb = lvl.thumbnail || getYouTubeThumbnail(lvl.verification_url)
                   return (
                     <div
@@ -2600,128 +1957,25 @@ export default function Home() {
                     >
                       <div className="flex items-center gap-5 w-full sm:w-auto">
                         <span className="fancy-display text-3xl text-orange-500 w-12">#{index + 1}</span>
-                        {thumb && (
-                          <img src={thumb} alt="" className="w-40 h-24 object-cover rounded-xl border border-orange-400" />
-                        )}
+                        {thumb && <img src={thumb} alt="" className="w-40 h-24 object-cover rounded-xl border border-orange-400" />}
                         <div className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2.5">
-                            <h3 className="goofy-title text-2xl hover:text-orange-500 transition">{lvl.title}</h3>
-                            {lvl.gd_level_id && (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs bg-orange-500/15 text-orange-500 px-2.5 py-0.5 rounded-lg font-mono">
-                                  ID: {lvl.gd_level_id}
-                                </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    navigator.clipboard.writeText(lvl.gd_level_id || '')
-                                    showNotice(`Copied GD ID: ${lvl.gd_level_id}`)
-                                  }}
-                                  className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-lg hover:bg-orange-600"
-                                >
-                                  Copy
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <h3 className="goofy-title text-2xl hover:text-orange-500 transition">{lvl.title}</h3>
                           <p className="text-sm text-gray-400">By {lvl.creator} • Verified by {lvl.verifier || 'Unknown'}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <span className="fancy-display text-2xl sm:text-3xl text-orange-500">{Number(lvl.points || 0).toFixed(2)}</span>
-                          <span className="text-xs text-gray-400 block">points</span>
-                        </div>
-                        {isMod && (
-                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => setEditingLevel(lvl)} className="bg-orange-500 text-white text-sm px-4 py-2 rounded-xl">Edit</button>
-                            <button onClick={() => handleDeleteLevel(lvl.id, lvl.title)} className="bg-red-600 text-white text-sm px-4 py-2 rounded-xl">Delete</button>
-                          </div>
-                        )}
+                      <div className="text-right">
+                        <span className="fancy-display text-2xl sm:text-3xl text-orange-500">{Number(lvl.points || 0).toFixed(2)}</span>
+                        <span className="text-xs text-gray-400 block">points</span>
                       </div>
                     </div>
                   )
-                })
-              )}
+                })}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* LEVEL EDIT MODAL */}
-        {editingLevel && isMod && (
-          <div onClick={() => setEditingLevel(null)} className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-lg w-full p-7 rounded-2xl border space-y-4 animate-panel ${cardClass}`}>
-              <div className="flex justify-between items-center border-b border-orange-500/25 pb-3">
-                <h3 className="fancy-display text-2xl text-orange-500">Edit Level Details</h3>
-                <button type="button" onClick={() => setEditingLevel(null)} className="text-sm bg-orange-500/15 text-orange-500 px-3 py-1 rounded-xl">Cancel</button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1">Title</label>
-                  <input required type="text" value={editingLevel.title} onChange={(e) => setEditingLevel({ ...editingLevel, title: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1">List Category</label>
-                  <select value={editingLevel.mode || 'classic'} onChange={(e) => setEditingLevel({ ...editingLevel, mode: e.target.value as ListCategory })} className={inputClass}>
-                    <option value="classic">Classic List</option>
-                    <option value="platformer">Platformer List</option>
-                    <option value="impossible">Impossible List</option>
-                    <option value="spam">Spam List</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1">Creator</label>
-                  <input required type="text" value={editingLevel.creator} onChange={(e) => setEditingLevel({ ...editingLevel, creator: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1">Verifier</label>
-                  <input type="text" value={editingLevel.verifier || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verifier: e.target.value })} className={inputClass} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1">GD Level ID</label>
-                  <input type="text" value={editingLevel.gd_level_id || ''} onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1">Points</label>
-                  <input type="number" step="0.01" value={editingLevel.points || 0} onChange={(e) => setEditingLevel({ ...editingLevel, points: Number(e.target.value) })} className={inputClass} />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs mb-1">Verification Video URL</label>
-                <input type="url" value={editingLevel.verification_url || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verification_url: e.target.value })} className={inputClass} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs mb-1">Password</label>
-                  <input type="text" value={editingLevel.password || 'Free Copy'} onChange={(e) => setEditingLevel({ ...editingLevel, password: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1">Length</label>
-                  <input type="text" value={editingLevel.level_length || '1m:30s'} onChange={(e) => setEditingLevel({ ...editingLevel, level_length: e.target.value })} className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1">Objects</label>
-                  <input type="number" value={editingLevel.object_count || 0} onChange={(e) => setEditingLevel({ ...editingLevel, object_count: Number(e.target.value) })} className={inputClass} />
-                </div>
-              </div>
-
-              <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm py-3 rounded-xl transition">
-                Save Level Changes
-              </button>
-            </form>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
     </div>
   )
 }
