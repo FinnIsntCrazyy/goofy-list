@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'dhavvin_09', 'lopikpl']
+const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'plasmaiscrazyy']
 const DISCORD_INVITE_URL = 'https://discord.gg/ePfDysKQxM'
 
 const BANNED_KEYWORDS = ['badword', 'offensiveword', 'spamword', 'scam', 'hack']
