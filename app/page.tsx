@@ -202,7 +202,6 @@ const COUNTRIES = [
   { code: 'ye', name: 'Yemen', region: 'Asia' },
   { code: 'zm', name: 'Zambia', region: 'Africa' },
   { code: 'zw', name: 'Zimbabwe', region: 'Africa' },
-  // Newly added territories
   { code: 'sealand', name: 'Principality of Sealand', region: 'Europe' },
   { code: 'aq', name: 'Antarctica', region: 'Antarctica' },
   { code: 'fo', name: 'Faroe Islands', region: 'Europe' },
@@ -256,7 +255,6 @@ interface Submission {
   video_url: string
   enjoyment: number
   mod_notes: string
-  introduction?: string
   submission_description?: string
   status: string
 }
@@ -341,7 +339,6 @@ export default function Home() {
   const [selectedListMode, setSelectedListMode] = useState<ListCategory>('classic')
   const [listsDropdownOpen, setListsDropdownOpen] = useState(false)
 
-  // Right-side Drawer for Submit Record & Submit Level
   const [rightDrawer, setRightDrawer] = useState<'none' | 'record' | 'level'>('none')
 
   const [search, setSearch] = useState('')
@@ -349,28 +346,23 @@ export default function Home() {
   const [sideDecor, setSideDecor] = useState(true)
   const [bannerMsg, setBannerMsg] = useState('')
 
-  // Register states
   const [regUsername, setRegUsername] = useState('')
   const [regDisplay, setRegDisplay] = useState('')
   const [regCountry, setRegCountry] = useState('pl')
   const [regEmail, setRegEmail] = useState('')
   const [regPass, setRegPass] = useState('')
 
-  // Login states
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
 
-  // Submit Record states
   const [recMode, setRecMode] = useState<ListCategory>('classic')
   const [recLevelId, setRecLevelId] = useState<number>(0)
   const [recProgress, setRecProgress] = useState(100)
   const [recVideo, setRecVideo] = useState('')
   const [recEnjoyment, setRecEnjoyment] = useState(8)
-  const [recIntro, setRecIntro] = useState('')
   const [recDesc, setRecDesc] = useState('')
   const [recNotes, setRecNotes] = useState('')
 
-  // Submit Level states
   const [lvlMode, setLvlMode] = useState<ListCategory>('classic')
   const [lvlTitle, setLvlTitle] = useState('')
   const [lvlCreator, setLvlCreator] = useState('')
@@ -389,7 +381,6 @@ export default function Home() {
   const [lvlSongId, setLvlSongId] = useState('')
   const [lvlMinPct, setLvlMinPct] = useState('75')
 
-  // Profile Editor states
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPassword, setEditPassword] = useState('')
@@ -402,7 +393,6 @@ export default function Home() {
   const [editPfp, setEditPfp] = useState('')
   const [editBadge, setEditBadge] = useState('Member')
 
-  // Mod Warning & Staff states
   const [warnTargetUser, setWarnTargetUser] = useState('')
   const [warnReason, setWarnReason] = useState('')
   const [modName, setModName] = useState('')
@@ -411,34 +401,25 @@ export default function Home() {
   const [modRole, setModRole] = useState<'editor' | 'helper'>('editor')
   const [bulkPointMultiplier, setBulkPointMultiplier] = useState('1.10')
 
-  // Mod Edit Level Modal states
   const [editingLevel, setEditingLevel] = useState<GoofyLevel | null>(null)
-
-  // Full Level Details View
   const [viewingLevel, setViewingLevel] = useState<GoofyLevel | null>(null)
-
-  // Dedicated Full Player Page View
   const [viewingPlayer, setViewingPlayer] = useState<PlayerLeaderboardRow | null>(null)
 
-  // Pointercrate Stats Viewer Leaderboard states
   const [selectedCountryFilter, setSelectedCountryFilter] = useState<string>('ALL')
   const [lbSearch, setLbSearch] = useState('')
   const [lbPage, setLbPage] = useState(0)
   const [selectedStatsPlayerId, setSelectedStatsPlayerId] = useState<string>('')
 
-  // Roulette Challenge states
   const [rouletteLevel, setRouletteLevel] = useState<GoofyLevel | null>(null)
   const [rouletteTargetPct, setRouletteTargetPct] = useState<number>(1)
   const [rouletteAchievedPct, setRouletteAchievedPct] = useState<number>(100)
   const [rouletteMessage, setRouletteMessage] = useState<string>('')
 
-  // Gacha Packs
   const [gachaPack, setGachaPack] = useState<'standard' | 'premium' | 'god'>('standard')
   const [gachaRolledLevel, setGachaRolledLevel] = useState<GoofyLevel | null>(null)
   const [gachaAnimating, setGachaAnimating] = useState(false)
   const [cooldownRemainingMs, setCooldownRemainingMs] = useState<number>(0)
 
-  // Forum & Bug Report states
   const [postCategory, setPostCategory] = useState<'forum' | 'bug'>('forum')
   const [postTitle, setPostTitle] = useState('')
   const [postContent, setPostContent] = useState('')
@@ -643,7 +624,6 @@ export default function Home() {
         progress: recProgress,
         video_url: recVideo.trim(),
         enjoyment: recEnjoyment,
-        introduction: recIntro.trim(),
         submission_description: recDesc.trim(),
         mod_notes: recNotes.trim(),
         status: 'pending',
@@ -654,7 +634,6 @@ export default function Home() {
       alert('Error: ' + error.message)
     } else {
       setRecVideo('')
-      setRecIntro('')
       setRecDesc('')
       setRecNotes('')
       setRightDrawer('none')
@@ -1401,10 +1380,6 @@ export default function Home() {
                   <input required type="url" placeholder="https://youtube.com/..." value={recVideo} onChange={(e) => setRecVideo(e.target.value)} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm mb-1.5">Introduction / Hook</label>
-                  <input type="text" placeholder="Short intro..." value={recIntro} onChange={(e) => setRecIntro(e.target.value)} className={inputClass} />
-                </div>
-                <div>
                   <label className="block text-sm mb-1.5">Submission Description</label>
                   <textarea rows={2} placeholder="Describe your completion..." value={recDesc} onChange={(e) => setRecDesc(e.target.value)} className={inputClass} />
                 </div>
@@ -1709,16 +1684,14 @@ export default function Home() {
             </div>
           )}
 
-          {/* POINTERCRATE STATS VIEWER LEADERBOARD WITH CLICKABLE SVG MAP */}
+          {/* POINTERCRATE STATS VIEWER LEADERBOARD */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
               <div className={`rounded-2xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-6 text-center space-y-3">
                   
-                  {/* INTERACTIVE CLICKABLE WORLD MAP SVG WITH VALID CHILD <title> TAGS */}
                   <svg viewBox="0 0 1000 500" className="w-full h-48 sm:h-60 opacity-85">
                     <g fill={darkMode ? '#27272a' : '#cbd5e1'} stroke={darkMode ? '#3f3f46' : '#ffffff'} strokeWidth="1">
-                      {/* North America (US/Greenland) */}
                       <path
                         d="M120,80 Q160,50 200,70 T280,100 Q300,140 260,180 T180,220 Q130,180 120,130 Z"
                         fill={selectedCountryFilter === 'us' ? '#f97316' : '#fb923c'}
@@ -1727,8 +1700,6 @@ export default function Home() {
                       >
                         <title>United States</title>
                       </path>
-
-                      {/* Greenland */}
                       <path
                         d="M320,50 Q360,40 380,70 T350,110 Q310,100 320,50 Z"
                         fill={selectedCountryFilter === 'gl' ? '#f97316' : '#fb923c'}
@@ -1737,8 +1708,6 @@ export default function Home() {
                       >
                         <title>Greenland</title>
                       </path>
-
-                      {/* South America (Brazil) */}
                       <path
                         d="M250,230 Q300,240 310,290 T280,410 Q250,450 230,370 T240,270 Z"
                         fill={selectedCountryFilter === 'br' ? '#f97316' : '#fdba74'}
@@ -1747,8 +1716,6 @@ export default function Home() {
                       >
                         <title>Brazil</title>
                       </path>
-
-                      {/* Europe (Poland / UK / Faroe / Aland) */}
                       <path
                         d="M470,80 Q530,60 570,90 T540,160 Q480,170 470,80 Z"
                         fill={selectedCountryFilter === 'pl' ? '#ea580c' : '#f97316'}
@@ -1757,11 +1724,7 @@ export default function Home() {
                       >
                         <title>Poland & Europe</title>
                       </path>
-
-                      {/* Africa */}
                       <path d="M480,180 Q560,170 580,230 T550,380 Q500,420 460,360 T480,180 Z" />
-
-                      {/* Asia (Japan / China) */}
                       <path
                         d="M580,70 Q750,40 850,90 T900,220 Q750,260 620,180 T580,70 Z"
                         fill={selectedCountryFilter === 'jp' ? '#f97316' : '#fb923c'}
@@ -1770,8 +1733,6 @@ export default function Home() {
                       >
                         <title>Japan & Asia</title>
                       </path>
-
-                      {/* Oceania (Australia) */}
                       <path
                         d="M780,310 Q850,300 880,350 T810,430 Q760,400 780,310 Z"
                         fill={selectedCountryFilter === 'au' ? '#f97316' : '#fdba74'}
