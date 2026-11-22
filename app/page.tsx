@@ -930,6 +930,21 @@ export default function Home() {
     return matchesCountry && matchesSearch
   })
 
+  // Calculate player count per country for map heatmap
+  const countryPlayerCounts = profiles.reduce((acc, p) => {
+    const code = (p.country || 'pl').toLowerCase()
+    acc[code] = (acc[code] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  function getCountryColor(code: string) {
+    const count = countryPlayerCounts[code] || 0
+    if (count === 0) return darkMode ? '#27272a' : '#cbd5e1'
+    if (count === 1) return '#fb923c'
+    if (count <= 3) return '#f97316'
+    return '#ea580c'
+  }
+
   const PAGE_SIZE = 15
   const pagedLeaderboard = filteredLeaderboard.slice(lbPage * PAGE_SIZE, (lbPage + 1) * PAGE_SIZE)
   const activeStatsPlayer =
@@ -1602,67 +1617,97 @@ export default function Home() {
             </div>
           )}
 
-          {/* POINTERCRATE STATS VIEWER LEADERBOARD */}
+          {/* WORLD MAP HEATMAP & LEADERBOARD STATS VIEWER */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
               <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-8 text-center space-y-4">
                   
-                  {/* DETAILED SVG WORLD MAP MATCHING POINTERCRATE STYLE */}
+                  {/* WORLD MAP MATCHING SPECIFIED IMAGE LAYOUT & DYNAMIC HEATMAP SHADING */}
                   <div className="max-w-3xl mx-auto p-4 bg-[#09090b]/80 rounded-3xl border border-orange-500/30">
                     <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click a Country on the Map to Filter</p>
-                    <svg viewBox="0 0 1000 450" className="w-full h-64 sm:h-80">
-                      <g fill={darkMode ? '#1f242d' : '#cbd5e1'} stroke={darkMode ? '#333b48' : '#ffffff'} strokeWidth="1">
+                    <svg viewBox="0 0 1000 500" className="w-full h-64 sm:h-80">
+                      <g stroke={darkMode ? '#333b48' : '#ffffff'} strokeWidth="1">
                         {/* North America / US & Canada */}
                         <path
                           d="M80,60 L280,40 L310,120 L270,180 L230,170 L200,240 L160,260 L140,210 L100,190 L70,120 Z"
-                          fill={selectedCountryFilter === 'us' || selectedCountryFilter === 'ca' ? '#f97316' : '#272f3d'}
-                          className="cursor-pointer hover:fill-orange-500 transition"
+                          fill={getCountryColor('us')}
+                          className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('us'); setLbPage(0); }}
                         >
-                          <title>North America / USA / Canada</title>
+                          <title>United States ({countryPlayerCounts['us'] || 0} players)</title>
                         </path>
-                        {/* South America */}
+                        <path
+                          d="M70,40 L280,20 L300,50 L80,70 Z"
+                          fill={getCountryColor('ca')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('ca'); setLbPage(0); }}
+                        >
+                          <title>Canada ({countryPlayerCounts['ca'] || 0} players)</title>
+                        </path>
+                        {/* South America / Brazil */}
                         <path
                           d="M240,260 L310,270 L340,360 L300,430 L250,380 L220,300 Z"
-                          fill={selectedCountryFilter === 'br' ? '#f97316' : '#272f3d'}
-                          className="cursor-pointer hover:fill-orange-500 transition"
+                          fill={getCountryColor('br')}
+                          className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('br'); setLbPage(0); }}
                         >
-                          <title>South America / Brazil</title>
+                          <title>Brazil ({countryPlayerCounts['br'] || 0} players)</title>
                         </path>
-                        {/* Europe & UK */}
+                        {/* Europe / Poland / UK / Germany */}
                         <path
                           d="M480,70 L550,60 L580,120 L530,170 L470,160 L460,110 Z"
-                          fill={selectedCountryFilter === 'pl' || selectedCountryFilter === 'gb' || selectedCountryFilter === 'de' ? '#ea580c' : '#272f3d'}
-                          className="cursor-pointer hover:fill-orange-500 transition"
+                          fill={getCountryColor('pl')}
+                          className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
                         >
-                          <title>Europe / Poland / Germany / UK (Click)</title>
+                          <title>Poland ({countryPlayerCounts['pl'] || 0} players)</title>
+                        </path>
+                        <path
+                          d="M440,80 L470,75 L475,110 L445,115 Z"
+                          fill={getCountryColor('gb')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('gb'); setLbPage(0); }}
+                        >
+                          <title>United Kingdom ({countryPlayerCounts['gb'] || 0} players)</title>
+                        </path>
+                        <path
+                          d="M485,95 L515,90 L520,125 L490,130 Z"
+                          fill={getCountryColor('de')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('de'); setLbPage(0); }}
+                        >
+                          <title>Germany ({countryPlayerCounts['de'] || 0} players)</title>
                         </path>
                         {/* Africa */}
                         <path
                           d="M470,190 L560,180 L590,320 L530,400 L460,330 L450,220 Z"
-                          fill="#272f3d"
+                          fill={getCountryColor('za')}
                         />
-                        {/* Asia & Russia */}
+                        {/* Asia / Russia / Japan */}
                         <path
                           d="M590,40 L880,30 L930,180 L820,240 L700,220 L620,160 Z"
-                          fill={selectedCountryFilter === 'jp' ? '#f97316' : '#272f3d'}
-                          className="cursor-pointer hover:fill-orange-500 transition"
+                          fill={getCountryColor('ru')}
+                        />
+                        <path
+                          d="M890,130 L930,120 L935,160 L895,170 Z"
+                          fill={getCountryColor('jp')}
+                          className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('jp'); setLbPage(0); }}
                         >
-                          <title>Asia / Russia / Japan</title>
+                          <title>Japan ({countryPlayerCounts['jp'] || 0} players)</title>
                         </path>
                         {/* Australia */}
                         <path
                           d="M800,300 L890,290 L910,380 L810,390 Z"
-                          fill={selectedCountryFilter === 'au' ? '#f97316' : '#272f3d'}
-                          className="cursor-pointer hover:fill-orange-500 transition"
+                          fill={getCountryColor('au')}
+                          className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('au'); setLbPage(0); }}
                         >
-                          <title>Australia</title>
+                          <title>Australia ({countryPlayerCounts['au'] || 0} players)</title>
                         </path>
+                        {/* Antarctica base layer */}
+                        <path d="M100,430 L900,430 L920,490 L80,490 Z" fill={darkMode ? '#18181b' : '#94a3b8'} />
                       </g>
                     </svg>
                   </div>
@@ -1904,7 +1949,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* DEMONS COMPLETED, CREATED, PUBLISHED, VERIFIED (POINTERCRATE STYLE) */}
+                {/* DEMONS COMPLETED, CREATED, PUBLISHED, VERIFIED */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
                   <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
                     <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons completed</p>
@@ -2251,7 +2296,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* LEVEL EDIT MODAL WITH PASSWORD, ID, LENGTH, OBJECT COUNT */}
+          {/* LEVEL EDIT MODAL */}
           {editingLevel && isMod && (
             <div onClick={() => setEditingLevel(null)} className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 overflow-y-auto">
               <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-xl w-full p-8 sm:p-10 rounded-3xl border space-y-5 animate-panel ${cardClass}`}>
