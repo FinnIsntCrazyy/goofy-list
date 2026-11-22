@@ -75,7 +75,7 @@ const COUNTRIES = [
 
 const GACHA_COOLDOWN_MS = 60 * 60 * 1000
 
-type ListCategory = 'classic' | 'platformer' | 'impossible' | 'spam'
+type ListCategory = 'classic' | 'impossible' | 'spam'
 
 interface PositionHistoryEntry {
   date: string
@@ -275,9 +275,8 @@ export default function Home() {
   const [rouletteAchievedPct, setRouletteAchievedPct] = useState<number>(100)
   const [rouletteMessage, setRouletteMessage] = useState<string>('')
 
-  const [gachaPack, setGachaPack] = useState<'standard' | 'premium' | 'god'>('standard')
-  const [gachaRolledLevel, setGachaRolledLevel] = useState<GoofyLevel | null>(null)
   const [gachaAnimating, setGachaAnimating] = useState(false)
+  const [gachaRolledLevel, setGachaRolledLevel] = useState<GoofyLevel | null>(null)
   const [cooldownRemainingMs, setCooldownRemainingMs] = useState<number>(0)
 
   const [postCategory, setPostCategory] = useState<'forum' | 'bug'>('forum')
@@ -987,7 +986,6 @@ export default function Home() {
 
   const listLabels: Record<ListCategory, string> = {
     classic: 'Classic List',
-    platformer: 'Platformer List',
     impossible: 'Impossible List',
     spam: 'Spam List',
   }
@@ -2035,8 +2033,15 @@ export default function Home() {
                   <p className="text-base text-gray-400">No pending level submissions.</p>
                 ) : (
                   pendingLevels.map((lvl) => (
-                    <div key={lvl.id} className="p-5 bg-orange-500/10 rounded-2xl flex justify-between text-base items-center">
-                      <span>{lvl.title} by {lvl.creator}</span>
+                    <div key={lvl.id} className="p-5 bg-orange-500/10 rounded-2xl flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                      <div>
+                        <span>{lvl.title} by {lvl.creator}</span>
+                        {lvl.verification_url && (
+                          <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
+                            Watch Video Proof ↗
+                          </a>
+                        )}
+                      </div>
                       <div className="flex gap-3">
                         <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold">Approve</button>
                         <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-bold">Reject</button>
@@ -2053,8 +2058,15 @@ export default function Home() {
                   <p className="text-base text-gray-400">No pending record submissions.</p>
                 ) : (
                   pendingSubs.map((sub) => (
-                    <div key={sub.id} className="p-5 bg-orange-500/10 rounded-2xl flex justify-between text-base items-center">
-                      <span>{sub.player_name} - {sub.progress}% on {sub.level_title}</span>
+                    <div key={sub.id} className="p-5 bg-orange-500/10 rounded-2xl flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                      <div>
+                        <span>{sub.player_name} - {sub.progress}% on {sub.level_title}</span>
+                        {sub.video_url && (
+                          <a href={sub.video_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
+                            Watch Video Proof ↗
+                          </a>
+                        )}
+                      </div>
                       <div className="flex gap-3">
                         <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold">Approve</button>
                         <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-bold">Reject</button>
