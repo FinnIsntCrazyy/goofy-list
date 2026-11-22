@@ -99,7 +99,6 @@ interface GoofyLevel {
   password?: string
   level_length?: string
   object_count?: number
-  difficulty?: string
   game_version?: string
   song_name?: string
   song_id?: string
@@ -172,6 +171,9 @@ interface PlayerLeaderboardRow extends Profile {
     role: 'Verifier' | 'Victor' | 'Progress'
     videoUrl?: string
   }[]
+  createdLevels: GoofyLevel[]
+  verifiedLevels: GoofyLevel[]
+  publishedLevels: GoofyLevel[]
 }
 
 function getYouTubeId(url?: string): string | null {
@@ -228,14 +230,13 @@ export default function Home() {
   const [lvlTitle, setLvlTitle] = useState('')
   const [lvlCreator, setLvlCreator] = useState('')
   const [lvlVerifier, setLvlVerifier] = useState('')
-  const [lvlGdId, setLvlGdId] = useState('')
   const [lvlVerifyVideo, setLvlVerifyVideo] = useState('')
   const [lvlPoints, setLvlPoints] = useState('250.00')
   const [lvlIntro, setLvlIntro] = useState('')
   const [lvlPassword, setLvlPassword] = useState('Free Copy')
+  const [lvlGdId, setLvlGdId] = useState('')
   const [lvlLength, setLvlLength] = useState('1m:45s')
   const [lvlObjects, setLvlObjects] = useState('85000')
-  const [lvlDifficulty, setLvlDifficulty] = useState('Extreme Demon')
   const [lvlVersion, setLvlVersion] = useState('2.2')
   const [lvlSongName, setLvlSongName] = useState('')
   const [lvlSongId, setLvlSongId] = useState('')
@@ -525,7 +526,6 @@ export default function Home() {
         password: lvlPassword.trim() || 'Free Copy',
         level_length: lvlLength.trim() || '1m:30s',
         object_count: parseInt(lvlObjects) || 0,
-        difficulty: lvlDifficulty.trim() || 'Extreme Demon',
         game_version: lvlVersion.trim() || '2.2',
         song_name: lvlSongName.trim(),
         song_id: lvlSongId.trim(),
@@ -618,7 +618,6 @@ export default function Home() {
         password: (editingLevel.password || 'Free Copy').trim(),
         level_length: (editingLevel.level_length || '1m:30s').trim(),
         object_count: Number(editingLevel.object_count) || 0,
-        difficulty: (editingLevel.difficulty || 'Extreme Demon').trim(),
         game_version: (editingLevel.game_version || '2.2').trim(),
         song_name: (editingLevel.song_name || '').trim(),
         song_id: (editingLevel.song_id || '').trim(),
@@ -844,18 +843,34 @@ export default function Home() {
         const dLower = (prof.display_name || prof.username).trim().toLowerCase()
         const seenLevelIds = new Set<number>()
         const entries: PlayerLeaderboardRow['entries'] = []
+        const createdLevels: GoofyLevel[] = []
+        const verifiedLevels: GoofyLevel[] = []
+        const publishedLevels: GoofyLevel[] = []
 
         modeLevels.forEach((lvl) => {
           const verLower = (lvl.verifier || '').trim().toLowerCase()
-          if (verLower && (verLower === uLower || verLower === dLower) && !seenLevelIds.has(lvl.id)) {
-            seenLevelIds.add(lvl.id)
-            entries.push({
-              level: lvl,
-              progress: 100,
-              pointsEarned: Number(lvl.points || 0),
-              role: 'Verifier',
-              videoUrl: lvl.verification_url,
-            })
+          if (verLower && (verLower === uLower || verLower === dLower)) {
+            verifiedLevels.push(lvl)
+            if (!seenLevelIds.has(lvl.id)) {
+              seenLevelIds.add(lvl.id)
+              entries.push({
+                level: lvl,
+                progress: 100,
+                pointsEarned: Number(lvl.points || 0),
+                role: 'Verifier',
+                videoUrl: lvl.verification_url,
+              })
+            }
+          }
+
+          const creatorLower = (lvl.creator || '').trim().toLowerCase()
+          if (creatorLower.includes(uLower) || creatorLower.includes(dLower)) {
+            createdLevels.push(lvl)
+          }
+
+          const subByLower = (lvl.submitted_by || '').trim().toLowerCase()
+          if (subByLower === uLower) {
+            publishedLevels.push(lvl)
           }
         })
 
@@ -889,6 +904,9 @@ export default function Home() {
           completedCount: fullCompletions.length,
           hardestLevel,
           entries: entries.sort((a, b) => Number(b.level.points || 0) - Number(a.level.points || 0)),
+          createdLevels,
+          verifiedLevels,
+          publishedLevels,
         }
       })
       .sort((a, b) => {
@@ -1090,7 +1108,16 @@ export default function Home() {
                 {renderAvatar(currentUser, 'w-10 h-10 text-sm')}
                 <button
                   onClick={() => {
-                    const row = getLeaderboardForMode('classic').find((p) => p.id === currentUser.id) || { ...currentUser, totalPoints: 0, completedCount: 0, hardestLevel: null, entries: [] }
+                    const row = getLeaderboardForMode('classic').find((p) => p.id === currentUser.id) || {
+                      ...currentUser,
+                      totalPoints: 0,
+                      completedCount: 0,
+                      hardestLevel: null,
+                      entries: [],
+                      createdLevels: [],
+                      verifiedLevels: [],
+                      publishedLevels: [],
+                    }
                     setViewingPlayer(row)
                     setActiveTab('profile')
                   }}
@@ -1326,10 +1353,6 @@ export default function Home() {
                   <label className="block text-base mb-1">Verification YouTube URL</label>
                   <input required type="url" placeholder="https://youtube.com/watch?v=..." value={lvlVerifyVideo} onChange={(e) => setLvlVerifyVideo(e.target.value)} className={inputClass} />
                 </div>
-                <div>
-                  <label className="block text-base mb-1">Introduction / Overview</label>
-                  <input type="text" placeholder="Brief level intro..." value={lvlIntro} onChange={(e) => setLvlIntro(e.target.value)} className={inputClass} />
-                </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-sm mb-1">Points</label>
@@ -1342,6 +1365,16 @@ export default function Home() {
                   <div>
                     <label className="block text-sm mb-1">Password</label>
                     <input type="text" value={lvlPassword} onChange={(e) => setLvlPassword(e.target.value)} className={inputClass} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm mb-1">Level Length</label>
+                    <input type="text" value={lvlLength} onChange={(e) => setLvlLength(e.target.value)} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Object Count</label>
+                    <input type="number" value={lvlObjects} onChange={(e) => setLvlObjects(e.target.value)} className={inputClass} />
                   </div>
                 </div>
                 <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl text-lg font-bold transition shadow-xl">
@@ -1512,7 +1545,7 @@ export default function Home() {
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-6 text-center pt-4 border-t border-orange-500/20">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center pt-4 border-t border-orange-500/20">
                   <div>
                     <p className="text-base text-orange-500">Level Password</p>
                     <p className="text-lg">{viewingLevel.password || 'Free Copy'}</p>
@@ -1536,10 +1569,6 @@ export default function Home() {
                   <div>
                     <p className="text-base text-orange-500">Object Count</p>
                     <p className="text-lg">{viewingLevel.object_count || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-base text-orange-500">In-Game Difficulty</p>
-                    <p className="text-lg">{viewingLevel.difficulty || 'Extreme Demon'}</p>
                   </div>
                 </div>
               </div>
@@ -1579,62 +1608,56 @@ export default function Home() {
               <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-8 text-center space-y-4">
                   
-                  {/* CLICKABLE INTERACTIVE WORLD MAP SVG */}
-                  <div className="max-w-2xl mx-auto p-4 bg-black/20 rounded-3xl border border-orange-500/30">
+                  {/* DETAILED SVG WORLD MAP MATCHING POINTERCRATE STYLE */}
+                  <div className="max-w-3xl mx-auto p-4 bg-[#09090b]/80 rounded-3xl border border-orange-500/30">
                     <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click a Country on the Map to Filter</p>
-                    <svg viewBox="0 0 1000 500" className="w-full h-56 sm:h-72">
-                      <g fill={darkMode ? '#27272a' : '#cbd5e1'} stroke={darkMode ? '#3f3f46' : '#ffffff'} strokeWidth="1.5">
-                        {/* North America / US */}
+                    <svg viewBox="0 0 1000 450" className="w-full h-64 sm:h-80">
+                      <g fill={darkMode ? '#1f242d' : '#cbd5e1'} stroke={darkMode ? '#333b48' : '#ffffff'} strokeWidth="1">
+                        {/* North America / US & Canada */}
                         <path
-                          d="M120,80 Q170,40 230,70 T300,120 Q320,160 270,210 T180,240 Q120,190 120,80 Z"
-                          fill={selectedCountryFilter === 'us' ? '#f97316' : '#fb923c'}
+                          d="M80,60 L280,40 L310,120 L270,180 L230,170 L200,240 L160,260 L140,210 L100,190 L70,120 Z"
+                          fill={selectedCountryFilter === 'us' || selectedCountryFilter === 'ca' ? '#f97316' : '#272f3d'}
                           className="cursor-pointer hover:fill-orange-500 transition"
                           onClick={() => { setSelectedCountryFilter('us'); setLbPage(0); }}
                         >
-                          <title>United States</title>
+                          <title>North America / USA / Canada</title>
                         </path>
-                        {/* Canada */}
+                        {/* South America */}
                         <path
-                          d="M100,50 Q180,20 280,40 T320,90 Q220,100 100,50 Z"
-                          fill={selectedCountryFilter === 'ca' ? '#f97316' : '#ea580c'}
-                          className="cursor-pointer hover:fill-orange-500 transition"
-                          onClick={() => { setSelectedCountryFilter('ca'); setLbPage(0); }}
-                        >
-                          <title>Canada</title>
-                        </path>
-                        {/* South America / Brazil */}
-                        <path
-                          d="M250,250 Q310,260 330,320 T290,440 Q260,480 230,390 T250,250 Z"
-                          fill={selectedCountryFilter === 'br' ? '#f97316' : '#fdba74'}
+                          d="M240,260 L310,270 L340,360 L300,430 L250,380 L220,300 Z"
+                          fill={selectedCountryFilter === 'br' ? '#f97316' : '#272f3d'}
                           className="cursor-pointer hover:fill-orange-500 transition"
                           onClick={() => { setSelectedCountryFilter('br'); setLbPage(0); }}
                         >
-                          <title>Brazil</title>
+                          <title>South America / Brazil</title>
                         </path>
-                        {/* Europe / Poland / UK / France */}
+                        {/* Europe & UK */}
                         <path
-                          d="M480,80 Q540,60 590,90 T560,180 Q490,190 480,80 Z"
-                          fill={selectedCountryFilter === 'pl' || selectedCountryFilter === 'gb' || selectedCountryFilter === 'de' ? '#ea580c' : '#f97316'}
+                          d="M480,70 L550,60 L580,120 L530,170 L470,160 L460,110 Z"
+                          fill={selectedCountryFilter === 'pl' || selectedCountryFilter === 'gb' || selectedCountryFilter === 'de' ? '#ea580c' : '#272f3d'}
                           className="cursor-pointer hover:fill-orange-500 transition"
                           onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
                         >
-                          <title>Poland & Europe (Click)</title>
+                          <title>Europe / Poland / Germany / UK (Click)</title>
                         </path>
                         {/* Africa */}
-                        <path d="M490,200 Q570,190 590,270 T550,420 Q480,440 470,320 T490,200 Z" fill="#fb923c" />
-                        {/* Asia / Japan */}
                         <path
-                          d="M600,70 Q780,40 880,90 T920,230 Q760,280 640,190 T600,70 Z"
-                          fill={selectedCountryFilter === 'jp' ? '#f97316' : '#fb923c'}
+                          d="M470,190 L560,180 L590,320 L530,400 L460,330 L450,220 Z"
+                          fill="#272f3d"
+                        />
+                        {/* Asia & Russia */}
+                        <path
+                          d="M590,40 L880,30 L930,180 L820,240 L700,220 L620,160 Z"
+                          fill={selectedCountryFilter === 'jp' ? '#f97316' : '#272f3d'}
                           className="cursor-pointer hover:fill-orange-500 transition"
                           onClick={() => { setSelectedCountryFilter('jp'); setLbPage(0); }}
                         >
-                          <title>Japan & Asia</title>
+                          <title>Asia / Russia / Japan</title>
                         </path>
                         {/* Australia */}
                         <path
-                          d="M790,320 Q870,310 900,360 T820,440 Q770,410 790,320 Z"
-                          fill={selectedCountryFilter === 'au' ? '#f97316' : '#fdba74'}
+                          d="M800,300 L890,290 L910,380 L810,390 Z"
+                          fill={selectedCountryFilter === 'au' ? '#f97316' : '#272f3d'}
                           className="cursor-pointer hover:fill-orange-500 transition"
                           onClick={() => { setSelectedCountryFilter('au'); setLbPage(0); }}
                         >
@@ -1817,7 +1840,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* PROFILE PAGE */}
+          {/* PROFILE PAGE WITH POINTERCRATE LAYOUT STYLE */}
           {activeTab === 'profile' && viewingPlayer && (
             <div className={`max-w-4xl mx-auto rounded-3xl border overflow-hidden space-y-8 animate-panel ${cardClass}`}>
               <div className="relative h-64 sm:h-72 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
@@ -1878,6 +1901,42 @@ export default function Home() {
                   <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-3xl space-y-3">
                     <p className="goofy-title text-xl text-orange-500">Player Bio</p>
                     <p className="text-gray-300 italic leading-relaxed">{viewingPlayer.bio || 'No bio description provided.'}</p>
+                  </div>
+                </div>
+
+                {/* DEMONS COMPLETED, CREATED, PUBLISHED, VERIFIED (POINTERCRATE STYLE) */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                    <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons completed</p>
+                    <p className="text-base font-normal">
+                      {viewingPlayer.entries.length > 0
+                        ? viewingPlayer.entries.map((e) => e.level.title).join(' • ')
+                        : 'None'}
+                    </p>
+                  </div>
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                    <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons created</p>
+                    <p className="text-base font-normal">
+                      {viewingPlayer.createdLevels.length > 0
+                        ? viewingPlayer.createdLevels.map((l) => l.title).join(' • ')
+                        : 'None'}
+                    </p>
+                  </div>
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                    <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons published</p>
+                    <p className="text-base font-normal">
+                      {viewingPlayer.publishedLevels.length > 0
+                        ? viewingPlayer.publishedLevels.map((l) => l.title).join(' • ')
+                        : 'None'}
+                    </p>
+                  </div>
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                    <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons verified</p>
+                    <p className="text-base font-normal">
+                      {viewingPlayer.verifiedLevels.length > 0
+                        ? viewingPlayer.verifiedLevels.map((l) => l.title).join(' • ')
+                        : 'None'}
+                    </p>
                   </div>
                 </div>
 
@@ -2153,6 +2212,7 @@ export default function Home() {
               <div className="space-y-5">
                 {shownLevels.map((lvl, index) => {
                   const thumb = lvl.thumbnail || getYouTubeThumbnail(lvl.verification_url)
+                  const victorsCount = getLevelVictorsAndVerifiers(lvl).filter(v => v.progress === 100).length
                   return (
                     <div
                       key={lvl.id}
@@ -2168,6 +2228,7 @@ export default function Home() {
                         <div className="space-y-1.5">
                           <h3 className="goofy-title text-2xl sm:text-3xl hover:text-orange-500 transition">{lvl.title}</h3>
                           <p className="text-base text-gray-400">By {lvl.creator} • Verified by {lvl.verifier || 'Unknown'}</p>
+                          <p className="text-sm text-orange-400 font-bold">{victorsCount} Victors</p>
                         </div>
                       </div>
 
@@ -2190,7 +2251,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* LEVEL EDIT MODAL */}
+          {/* LEVEL EDIT MODAL WITH PASSWORD, ID, LENGTH, OBJECT COUNT */}
           {editingLevel && isMod && (
             <div onClick={() => setEditingLevel(null)} className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 overflow-y-auto">
               <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-xl w-full p-8 sm:p-10 rounded-3xl border space-y-5 animate-panel ${cardClass}`}>
@@ -2225,14 +2286,29 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-sm mb-1">GD Level ID</label>
                     <input type="text" value={editingLevel.gd_level_id || ''} onChange={(e) => setEditingLevel({ ...editingLevel, gd_level_id: e.target.value })} className={inputClass} />
                   </div>
                   <div>
+                    <label className="block text-sm mb-1">Password</label>
+                    <input type="text" value={editingLevel.password || 'Free Copy'} onChange={(e) => setEditingLevel({ ...editingLevel, password: e.target.value })} className={inputClass} />
+                  </div>
+                  <div>
                     <label className="block text-sm mb-1">Points</label>
                     <input type="number" step="0.01" value={editingLevel.points || 0} onChange={(e) => setEditingLevel({ ...editingLevel, points: Number(e.target.value) })} className={inputClass} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm mb-1">Level Length</label>
+                    <input type="text" value={editingLevel.level_length || '1m:30s'} onChange={(e) => setEditingLevel({ ...editingLevel, level_length: e.target.value })} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Object Count</label>
+                    <input type="number" value={editingLevel.object_count || 0} onChange={(e) => setEditingLevel({ ...editingLevel, object_count: Number(e.target.value) })} className={inputClass} />
                   </div>
                 </div>
 
