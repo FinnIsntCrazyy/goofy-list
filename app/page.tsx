@@ -232,7 +232,6 @@ export default function Home() {
   const [lvlVerifier, setLvlVerifier] = useState('')
   const [lvlVerifyVideo, setLvlVerifyVideo] = useState('')
   const [lvlPoints, setLvlPoints] = useState('250.00')
-  const [lvlIntro, setLvlIntro] = useState('')
   const [lvlPassword, setLvlPassword] = useState('Free Copy')
   const [lvlGdId, setLvlGdId] = useState('')
   const [lvlLength, setLvlLength] = useState('1m:45s')
@@ -542,7 +541,6 @@ export default function Home() {
       setLvlVerifier('')
       setLvlGdId('')
       setLvlVerifyVideo('')
-      setLvlIntro('')
       setRightDrawer('none')
       refreshAll()
       showNotice('Level sent to moderators for review!')
@@ -954,11 +952,11 @@ export default function Home() {
 
   const pageBg = darkMode ? 'bg-[#09090b] text-white' : 'bg-[#f8fafc] text-[#111827]'
   const cardClass = darkMode
-    ? 'bg-[#121216] border-orange-500/35 text-white shadow-2xl'
-    : 'bg-white border-orange-300 text-[#111827] shadow-xl'
+    ? 'bg-[#121216] border-orange-500/35 text-white'
+    : 'bg-white border-orange-300 text-[#111827]'
   const inputClass = darkMode
-    ? 'w-full border border-orange-500/40 bg-[#18181f] text-white font-bold rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-orange-500 transition'
-    : 'w-full border border-orange-300 bg-orange-50/40 text-gray-900 font-bold rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-orange-500 transition'
+    ? 'w-full border border-orange-500/40 bg-[#18181f] text-white font-bold px-4 py-3 text-lg focus:outline-none focus:border-orange-500 transition'
+    : 'w-full border border-orange-300 bg-orange-50/40 text-gray-900 font-bold px-4 py-3 text-lg focus:outline-none focus:border-orange-500 transition'
 
   const categoryLevels = approvedLevels.filter((l) => (l.mode || 'classic') === selectedListMode)
   const shownLevels = categoryLevels.filter(
@@ -1011,7 +1009,7 @@ export default function Home() {
       return <img src={prof.pfp_url} alt="" className={`${sizeClass} rounded-full object-cover border-2 border-orange-500`} />
     }
     return (
-      <div className={`${sizeClass} rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center font-black border-2 border-orange-300 shadow`}>
+      <div className={`${sizeClass} rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center font-black border-2 border-orange-300`}>
         {label}
       </div>
     )
@@ -1047,19 +1045,19 @@ export default function Home() {
         }
       `}</style>
 
-      {/* CORRECTED SIDE WAVES (SMOOTH & CLEAN DECORATION) */}
+      {/* BIG, THICK SIDE WAVES */}
       {sideDecor && (
         <>
-          <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-6 z-40 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 24 800" preserveAspectRatio="none" className="w-full h-full">
-              <path d="M0,0 L20,0 C24,130 8,260 16,400 C24,540 6,670 18,800 L0,800 Z" fill="#ea580c" opacity="0.35" />
-              <path d="M0,0 L12,0 C16,130 4,260 10,400 C16,540 2,670 10,800 L0,800 Z" fill="#f97316" opacity="0.75" />
+          <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-16 sm:w-24 z-40 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 100 800" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M0,0 L85,0 C95,130 60,260 80,400 C95,540 50,670 85,800 L0,800 Z" fill="#ea580c" opacity="0.45" />
+              <path d="M0,0 L50,0 C65,130 30,260 45,400 C60,540 20,670 50,800 L0,800 Z" fill="#f97316" opacity="0.85" />
             </svg>
           </div>
-          <div aria-hidden="true" className="fixed right-0 top-0 bottom-0 w-6 z-40 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 24 800" preserveAspectRatio="none" className="w-full h-full">
-              <path d="M24,0 L4,0 C0,130 16,260 8,400 C0,540 18,670 6,800 L24,800 Z" fill="#ea580c" opacity="0.35" />
-              <path d="M24,0 L12,0 C8,130 20,260 14,400 C8,540 22,670 14,800 L24,800 Z" fill="#f97316" opacity="0.75" />
+          <div aria-hidden="true" className="fixed right-0 top-0 bottom-0 w-16 sm:w-24 z-40 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 100 800" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M100,0 L15,0 C5,130 40,260 20,400 C5,540 50,670 15,800 L100,800 Z" fill="#ea580c" opacity="0.45" />
+              <path d="M100,0 L50,0 C35,130 70,260 55,400 C40,540 80,670 50,800 L100,800 Z" fill="#f97316" opacity="0.85" />
             </svg>
           </div>
         </>
@@ -1082,7 +1080,7 @@ export default function Home() {
               href={DISCORD_INVITE_URL}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-2xl text-base font-bold transition shadow"
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-none text-base font-bold transition"
             >
               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                 <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
@@ -1092,7 +1090,7 @@ export default function Home() {
 
             <button
               onClick={handleToggleSideDecor}
-              className={`px-4 py-2.5 rounded-2xl text-base font-bold border transition ${
+              className={`px-4 py-2.5 rounded-none text-base font-bold border transition ${
                 sideDecor ? 'bg-orange-500/15 border-orange-500 text-orange-500' : 'border-gray-400/40 text-gray-400'
               }`}
             >
@@ -1101,7 +1099,7 @@ export default function Home() {
 
             <button
               onClick={handleToggleTheme}
-              className="p-3 rounded-2xl border border-orange-500/35 hover:bg-orange-500/10 text-orange-500 transition"
+              className="p-3 rounded-none border border-orange-500/35 hover:bg-orange-500/10 text-orange-500 transition"
               title="Toggle Theme"
             >
               {darkMode ? (
@@ -1133,7 +1131,7 @@ export default function Home() {
                     setViewingPlayer(row)
                     setActiveTab('profile')
                   }}
-                  className="text-base bg-orange-500/15 border border-orange-500 text-orange-500 px-4 py-2.5 rounded-2xl font-bold hover:bg-orange-500 hover:text-white transition"
+                  className="text-base bg-orange-500/15 border border-orange-500 text-orange-500 px-4 py-2.5 rounded-none font-bold hover:bg-orange-500 hover:text-white transition"
                 >
                   {currentUser.display_name}
                 </button>
@@ -1144,7 +1142,7 @@ export default function Home() {
             ) : (
               <div className="flex items-center gap-3">
                 <button onClick={() => setActiveTab('login')} className="hover:text-orange-500 transition">Login</button>
-                <button onClick={() => setActiveTab('register')} className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-2xl text-base font-bold transition">
+                <button onClick={() => setActiveTab('register')} className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-none text-base font-bold transition">
                   Register
                 </button>
               </div>
@@ -1180,7 +1178,7 @@ export default function Home() {
               {listsDropdownOpen && (
                 <div
                   onMouseLeave={() => setListsDropdownOpen(false)}
-                  className={`absolute left-0 mt-1 w-64 rounded-2xl border shadow-2xl z-50 overflow-hidden ${
+                  className={`absolute left-0 mt-1 w-64 border shadow-2xl z-50 overflow-hidden ${
                     darkMode ? 'bg-[#18181f] border-orange-500/40 text-white' : 'bg-white border-orange-300 text-gray-900'
                   }`}
                 >
@@ -1236,7 +1234,7 @@ export default function Home() {
               >
                 <span>Mod Panel</span>
                 {pendingSubs.length + pendingLevels.length > 0 && (
-                  <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5 rounded-full">
+                  <span className="bg-orange-500 text-white text-xs px-2.5 py-0.5">
                     {pendingSubs.length + pendingLevels.length}
                   </span>
                 )}
@@ -1251,13 +1249,13 @@ export default function Home() {
         <div className="fixed right-4 sm:right-10 bottom-8 z-40 flex flex-col gap-3.5">
           <button
             onClick={() => setRightDrawer(rightDrawer === 'record' ? 'none' : 'record')}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-3xl text-base sm:text-lg font-bold shadow-[0_10px_30px_rgba(249,115,22,0.5)] flex items-center gap-3 transition transform hover:-translate-y-1"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 rounded-none text-base sm:text-lg font-bold shadow-2xl flex items-center gap-3 transition transform hover:-translate-y-1"
           >
             <span>+ Submit Record</span>
           </button>
           <button
             onClick={() => setRightDrawer(rightDrawer === 'level' ? 'none' : 'level')}
-            className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-4 rounded-3xl text-base sm:text-lg font-bold shadow-[0_10px_30px_rgba(217,119,6,0.5)] flex items-center gap-3 transition transform hover:-translate-y-1"
+            className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-4 rounded-none text-base sm:text-lg font-bold shadow-2xl flex items-center gap-3 transition transform hover:-translate-y-1"
           >
             <span>+ Submit Level</span>
           </button>
@@ -1269,7 +1267,7 @@ export default function Home() {
         <div onClick={() => setRightDrawer('none')} className="fixed inset-0 bg-black/75 z-50 flex justify-end">
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full max-w-xl h-full overflow-y-auto p-8 sm:p-10 border-l space-y-6 animate-panel ${cardClass}`}
+            className={`w-full max-w-xl h-full overflow-y-auto p-8 sm:p-10 border-l space-y-6 animate-panel rounded-none ${cardClass}`}
           >
             <div className="flex items-center justify-between border-b border-orange-500/25 pb-4">
               <h2 className="fancy-display text-2xl sm:text-3xl text-orange-500">
@@ -1277,7 +1275,7 @@ export default function Home() {
               </h2>
               <button
                 onClick={() => setRightDrawer('none')}
-                className="bg-orange-500/20 text-orange-500 px-4 py-2 rounded-2xl text-base hover:bg-orange-500 hover:text-white transition"
+                className="bg-orange-500/20 text-orange-500 px-4 py-2 rounded-none text-base hover:bg-orange-500 hover:text-white transition"
               >
                 Close ✕
               </button>
@@ -1320,14 +1318,14 @@ export default function Home() {
                     max={10}
                     value={recEnjoyment}
                     onChange={(e) => setRecEnjoyment(Number(e.target.value))}
-                    className="w-full accent-orange-500 cursor-pointer h-3 bg-orange-500/20 rounded-lg"
+                    className="w-full accent-orange-500 cursor-pointer h-3 bg-orange-500/20 rounded-none"
                   />
                 </div>
                 <div>
                   <label className="block text-base mb-2">Mod Notes</label>
                   <input type="text" placeholder="Raw footage link..." value={recNotes} onChange={(e) => setRecNotes(e.target.value)} className={inputClass} />
                 </div>
-                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl text-lg font-bold transition shadow-xl">
+                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-none text-lg font-bold transition shadow-xl">
                   Send Record Submission
                 </button>
               </form>
@@ -1389,7 +1387,7 @@ export default function Home() {
                     <input type="number" value={lvlObjects} onChange={(e) => setLvlObjects(e.target.value)} className={inputClass} />
                   </div>
                 </div>
-                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl text-lg font-bold transition shadow-xl">
+                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-none text-lg font-bold transition shadow-xl">
                   Submit Level for Review
                 </button>
               </form>
@@ -1400,7 +1398,7 @@ export default function Home() {
 
       {bannerMsg && (
         <div className="max-w-7xl mx-auto px-4 sm:px-8 pt-6 animate-panel">
-          <div className="bg-orange-500 text-white px-6 py-4 rounded-2xl text-base font-bold flex justify-between shadow-2xl">
+          <div className="bg-orange-500 text-white px-6 py-4 rounded-none text-base font-bold flex justify-between shadow-2xl">
             <span>{bannerMsg}</span>
             <button onClick={() => setBannerMsg('')} className="font-black ml-4">CLOSE</button>
           </div>
@@ -1412,7 +1410,7 @@ export default function Home() {
         
         {/* LEFT SIDEBAR: STAFF & EDITORS */}
         <aside className="lg:col-span-3 space-y-6">
-          <div className={`p-6 sm:p-8 rounded-3xl border space-y-5 ${cardClass}`}>
+          <div className={`p-6 sm:p-8 border space-y-5 rounded-none ${cardClass}`}>
             <h3 className="goofy-title text-2xl text-orange-500 border-b border-orange-500/20 pb-4">List Staff & Editors</h3>
             
             <div className="space-y-6 text-base">
@@ -1425,7 +1423,7 @@ export default function Home() {
                     {moderators
                       .filter((m) => m.role === 'editor')
                       .map((m) => (
-                        <div key={m.id} className="flex items-center gap-3 bg-orange-500/10 px-4 py-3 rounded-2xl border border-orange-500/20">
+                        <div key={m.id} className="flex items-center gap-3 bg-orange-500/10 px-4 py-3 border border-orange-500/20 rounded-none">
                           <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt="" className="w-6 h-4 border" />
                           <span className="truncate">{m.clan ? `[${m.clan}] ` : ''}{m.name}</span>
                         </div>
@@ -1443,7 +1441,7 @@ export default function Home() {
                     {moderators
                       .filter((m) => m.role === 'helper')
                       .map((m) => (
-                        <div key={m.id} className="flex items-center gap-3 bg-orange-500/10 px-4 py-3 rounded-2xl border border-orange-500/20">
+                        <div key={m.id} className="flex items-center gap-3 bg-orange-500/10 px-4 py-3 border border-orange-500/20 rounded-none">
                           <img src={`https://flagcdn.com/w20/${m.country_code.toLowerCase()}.png`} alt="" className="w-6 h-4 border" />
                           <span className="truncate">{m.clan ? `[${m.clan}] ` : ''}{m.name}</span>
                         </div>
@@ -1460,8 +1458,8 @@ export default function Home() {
           {/* WELCOME PAGE */}
           {activeTab === 'welcome' && (
             <div className="space-y-8 animate-panel">
-              <div className={`p-10 sm:p-14 rounded-3xl border text-center space-y-6 ${cardClass}`}>
-                <span className="inline-block bg-orange-500/20 text-orange-500 border border-orange-500/40 px-5 py-2 rounded-full text-base uppercase tracking-wider">
+              <div className={`p-10 sm:p-14 border text-center space-y-6 rounded-none ${cardClass}`}>
+                <span className="inline-block bg-orange-500/20 text-orange-500 border border-orange-500/40 px-5 py-2 uppercase tracking-wider rounded-none">
                   Official Geometry Dash Community Demonlist
                 </span>
                 <h1 className="fancy-display text-4xl sm:text-6xl text-orange-500 leading-tight">
@@ -1476,13 +1474,13 @@ export default function Home() {
                       setSelectedListMode('classic')
                       setActiveTab('list')
                     }}
-                    className="bg-orange-500 hover:bg-orange-600 text-white px-9 py-4 rounded-3xl text-lg font-bold transition shadow-2xl"
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-9 py-4 rounded-none text-lg font-bold transition shadow-2xl"
                   >
                     Browse Classic List
                   </button>
                   <button
                     onClick={() => setActiveTab('leaderboard')}
-                    className="bg-orange-500/15 border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-9 py-4 rounded-3xl text-lg font-bold transition"
+                    className="bg-orange-500/15 border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-9 py-4 rounded-none text-lg font-bold transition"
                   >
                     Open Stats Viewer
                   </button>
@@ -1495,7 +1493,7 @@ export default function Home() {
                   { label: 'Registered Players', value: profiles.length, sub: 'Competing Worldwide' },
                   { label: 'Verified Records', value: approvedSubs.length, sub: 'With Video Proof' },
                 ].map((stat, i) => (
-                  <div key={i} className={`p-8 rounded-3xl border text-center space-y-2 ${cardClass}`}>
+                  <div key={i} className={`p-8 border text-center space-y-2 rounded-none ${cardClass}`}>
                     <p className="fancy-display text-5xl text-orange-500">{stat.value}</p>
                     <p className="text-lg">{stat.label}</p>
                     <p className="text-sm text-gray-400">{stat.sub}</p>
@@ -1510,12 +1508,12 @@ export default function Home() {
             <div className="space-y-6 animate-panel">
               <button
                 onClick={() => setActiveTab('list')}
-                className="bg-orange-500/15 border border-orange-500/40 text-orange-500 px-5 py-2.5 rounded-2xl text-base hover:bg-orange-500 hover:text-white transition"
+                className="bg-orange-500/15 border border-orange-500/40 text-orange-500 px-5 py-2.5 rounded-none text-base hover:bg-orange-500 hover:text-white transition"
               >
                 ← Back to {listLabels[viewingLevel.mode || 'classic']}
               </button>
 
-              <div className={`p-8 sm:p-12 rounded-3xl border space-y-8 ${cardClass}`}>
+              <div className={`p-8 sm:p-12 border space-y-8 rounded-none ${cardClass}`}>
                 <div className="text-center space-y-3 border-b border-orange-500/20 pb-8">
                   <div className="flex items-center justify-center gap-6">
                     <button
@@ -1546,7 +1544,7 @@ export default function Home() {
 
                 <div className="max-w-3xl mx-auto">
                   {getYouTubeId(viewingLevel.verification_url) ? (
-                    <div className="aspect-video w-full rounded-2xl overflow-hidden border-2 border-orange-500/40 shadow-2xl">
+                    <div className="aspect-video w-full rounded-none overflow-hidden border-2 border-orange-500/40 shadow-2xl">
                       <iframe
                         className="w-full h-full"
                         src={`https://www.youtube.com/embed/${getYouTubeId(viewingLevel.verification_url)}`}
@@ -1586,7 +1584,7 @@ export default function Home() {
               </div>
 
               {/* RECORDS */}
-              <div className={`p-8 rounded-3xl border space-y-4 text-center ${cardClass}`}>
+              <div className={`p-8 border space-y-4 text-center rounded-none ${cardClass}`}>
                 <h3 className="goofy-title text-3xl text-orange-500">Records</h3>
                 <p className="text-base text-gray-400 border-b border-orange-500/20 pb-4">
                   {viewingLevel.min_percent || 75}% or better required to qualify
@@ -1596,13 +1594,13 @@ export default function Home() {
                 ) : (
                   <div className="space-y-3 text-left">
                     {getLevelVictorsAndVerifiers(viewingLevel).map((v, i) => (
-                      <div key={i} className="flex items-center justify-between bg-orange-500/10 px-6 py-4 rounded-2xl text-base">
+                      <div key={i} className="flex items-center justify-between bg-orange-500/10 px-6 py-4 border border-orange-500/20 rounded-none text-base">
                         <div>
                           <span className="font-bold text-lg">{v.displayName}</span>{' '}
                           <span className="text-orange-500">({v.role} - {v.progress}%)</span>
                         </div>
                         {v.videoUrl && (
-                          <a href={v.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm">
+                          <a href={v.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm">
                             Video Proof ↗
                           </a>
                         )}
@@ -1617,13 +1615,13 @@ export default function Home() {
           {/* WORLD MAP HEATMAP & LEADERBOARD STATS VIEWER */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
-              <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
+              <div className={`border overflow-hidden rounded-none ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-8 text-center space-y-4">
                   
-                  {/* DETAILED CLICKABLE COUNTRIES WORLD MAP WITH HEATMAP SHADING */}
-                  <div className="max-w-3xl mx-auto p-4 bg-[#09090b]/80 rounded-3xl border border-orange-500/30">
+                  {/* REALISTIC SVG WORLD MAP WITH CLICKABLE INDIVIDUAL COUNTRIES & HEATMAP SHADING */}
+                  <div className="max-w-4xl mx-auto p-4 bg-[#09090b]/90 border border-orange-500/30 rounded-none">
                     <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click an Individual Country on the Map to Filter</p>
-                    <svg viewBox="0 0 1000 500" className="w-full h-64 sm:h-80">
+                    <svg viewBox="0 0 1000 500" className="w-full h-72 sm:h-96">
                       <g stroke={darkMode ? '#333b48' : '#ffffff'} strokeWidth="1">
                         {/* United States */}
                         <path
@@ -1748,7 +1746,7 @@ export default function Home() {
                         setSelectedListMode(e.target.value as ListCategory)
                         setLbPage(0)
                       }}
-                      className={`border-2 border-orange-500 rounded-2xl bg-orange-500/15 text-xl font-bold px-4 py-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                      className={`border-2 border-orange-500 rounded-none bg-orange-500/15 text-xl font-bold px-4 py-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}
                     >
                       <option value="classic" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>Classic List Leaderboard</option>
                       <option value="impossible" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>Impossible List Leaderboard</option>
@@ -1761,7 +1759,7 @@ export default function Home() {
                         setSelectedCountryFilter(e.target.value)
                         setLbPage(0)
                       }}
-                      className={`border-2 border-orange-500 rounded-2xl bg-orange-500/15 text-xl font-bold px-4 py-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                      className={`border-2 border-orange-500 rounded-none bg-orange-500/15 text-xl font-bold px-4 py-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}
                     >
                       <option value="ALL" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>Global (All Countries)</option>
                       {COUNTRIES.map((c) => (
@@ -1784,7 +1782,7 @@ export default function Home() {
                         }}
                         className={inputClass}
                       />
-                      <div className="border border-orange-500/30 rounded-2xl h-96 overflow-y-auto divide-y divide-orange-500/15">
+                      <div className="border border-orange-500/30 rounded-none h-96 overflow-y-auto divide-y divide-orange-500/15">
                         {pagedLeaderboard.map((player) => {
                           const globalRank = activeLeaderboard.findIndex((p) => p.id === player.id) + 1
                           const isSelected = activeStatsPlayer?.id === player.id
@@ -1830,13 +1828,13 @@ export default function Home() {
                           </button>
                         </div>
                         <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
-                          <div className="bg-orange-500/10 p-6 rounded-2xl border border-orange-500/20">
+                          <div className="bg-orange-500/10 p-6 border border-orange-500/20 rounded-none">
                             <p className="text-base text-orange-500">List Rank</p>
                             <p className="text-3xl font-mono mt-1">
                               {activeStatsPlayer.totalPoints > 0 ? `#${activeLeaderboard.findIndex((p) => p.id === activeStatsPlayer.id) + 1}` : '-'}
                             </p>
                           </div>
-                          <div className="bg-orange-500/10 p-6 rounded-2xl border border-orange-500/20">
+                          <div className="bg-orange-500/10 p-6 border border-orange-500/20 rounded-none">
                             <p className="text-base text-orange-500">List Score</p>
                             <p className="text-3xl font-mono mt-1">{activeStatsPlayer.totalPoints.toFixed(2)}</p>
                           </div>
@@ -1846,7 +1844,7 @@ export default function Home() {
                             setViewingPlayer(activeStatsPlayer)
                             setActiveTab('profile')
                           }}
-                          className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-2xl text-base font-bold transition shadow-xl"
+                          className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-none text-base font-bold transition shadow-xl"
                         >
                           View Full Profile ↗
                         </button>
@@ -1860,19 +1858,19 @@ export default function Home() {
 
           {/* GOOFY GACHA TAB */}
           {activeTab === 'gacha' && (
-            <div className={`p-10 rounded-3xl border text-center space-y-8 animate-panel ${cardClass}`}>
+            <div className={`p-10 border text-center space-y-8 rounded-none animate-panel ${cardClass}`}>
               <div className="space-y-3">
-                <span className="bg-orange-500/20 text-orange-500 px-5 py-2 rounded-full text-base">Goofy Gacha Minigame</span>
+                <span className="bg-orange-500/20 text-orange-500 px-5 py-2 rounded-none text-base">Goofy Gacha Minigame</span>
                 <h2 className="fancy-display text-4xl text-orange-500">Spin the Demon Gacha!</h2>
                 <p className="text-lg text-gray-400 max-w-xl mx-auto">
                   Roll once every hour to unlock random demons and collect them in your player inventory profile!
                 </p>
               </div>
 
-              <div className="max-w-md mx-auto p-8 rounded-3xl bg-black/30 border border-orange-500/40 space-y-6 shadow-2xl">
+              <div className="max-w-md mx-auto p-8 bg-black/30 border border-orange-500/40 space-y-6 shadow-2xl rounded-none">
                 {gachaAnimating ? (
                   <div className="py-16 space-y-4">
-                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-none animate-spin mx-auto" />
                     <p className="text-xl font-bold animate-pulse text-orange-400">Rolling Demon Pack...</p>
                   </div>
                 ) : gachaRolledLevel ? (
@@ -1881,9 +1879,9 @@ export default function Home() {
                     <h3 className="goofy-title text-3xl text-white">{gachaRolledLevel.title}</h3>
                     <p className="text-base text-orange-400">By {gachaRolledLevel.creator} ({gachaRolledLevel.points} Points)</p>
                     {getYouTubeThumbnail(gachaRolledLevel.verification_url) && (
-                      <img src={getYouTubeThumbnail(gachaRolledLevel.verification_url)} alt="" className="w-full h-48 object-cover rounded-2xl border border-orange-500/40" />
+                      <img src={getYouTubeThumbnail(gachaRolledLevel.verification_url)} alt="" className="w-full h-48 object-cover border border-orange-500/40 rounded-none" />
                     )}
-                    <button onClick={() => setGachaRolledLevel(null)} className="w-full bg-orange-500 text-white py-3.5 rounded-2xl font-bold">
+                    <button onClick={() => setGachaRolledLevel(null)} className="w-full bg-orange-500 text-white py-3.5 rounded-none font-bold">
                       Roll Again / Close
                     </button>
                   </div>
@@ -1901,7 +1899,7 @@ export default function Home() {
                     <button
                       disabled={cooldownRemainingMs > 0}
                       onClick={handleRollGacha}
-                      className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white py-4 rounded-2xl text-lg font-bold shadow-xl transition"
+                      className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white py-4 rounded-none text-lg font-bold shadow-xl transition"
                     >
                       {cooldownRemainingMs > 0 ? 'On Cooldown' : 'Open Gacha Pack (1 Roll)'}
                     </button>
@@ -1911,9 +1909,9 @@ export default function Home() {
             </div>
           )}
 
-          {/* PROFILE PAGE WITH PERFECTLY ROUND AVATAR & OVERLAPPING FLAG */}
+          {/* PROFILE PAGE WITH CORRECTED AVATAR & FLAG FRAME */}
           {activeTab === 'profile' && viewingPlayer && (
-            <div className={`max-w-4xl mx-auto rounded-3xl border overflow-hidden space-y-8 animate-panel ${cardClass}`}>
+            <div className={`max-w-4xl mx-auto border overflow-hidden space-y-8 rounded-none animate-panel ${cardClass}`}>
               <div className="relative h-64 sm:h-72 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
                 {viewingPlayer.banner_url ? (
                   <img src={viewingPlayer.banner_url} alt="" className="w-full h-full object-cover opacity-85" />
@@ -1925,7 +1923,7 @@ export default function Home() {
                 <div className="absolute top-6 left-6">
                   <button
                     onClick={() => setActiveTab('leaderboard')}
-                    className="text-base bg-black/55 text-white px-5 py-2.5 rounded-2xl hover:bg-black/80 backdrop-blur transition"
+                    className="text-base bg-black/55 text-white px-5 py-2.5 rounded-none hover:bg-black/80 backdrop-blur transition"
                   >
                     ← Back to Leaderboard
                   </button>
@@ -1935,18 +1933,18 @@ export default function Home() {
               <div className="px-8 sm:px-12 pb-12 space-y-8 -mt-20 relative z-10">
                 <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
                   <div className="flex items-end gap-5">
-                    <div className="relative">
+                    <div className="relative inline-block">
                       {renderAvatar(viewingPlayer, 'w-28 h-28 text-4xl shadow-2xl rounded-full')}
                       <img
                         src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
                         alt=""
-                        className="absolute bottom-0 right-0 w-9 h-6 object-cover border-2 border-white rounded shadow-md"
+                        className="absolute bottom-0 right-0 w-8 h-6 object-cover border-2 border-black rounded-none shadow-md"
                       />
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
                         <h2 className="fancy-display text-3xl sm:text-4xl text-white drop-shadow">{viewingPlayer.display_name}</h2>
-                        <span className="bg-orange-500 text-white text-sm px-3.5 py-1 rounded-full uppercase font-bold">
+                        <span className="bg-orange-500 text-white text-sm px-3.5 py-1 uppercase font-bold rounded-none">
                           {viewingPlayer.title_badge || 'Member'}
                         </span>
                       </div>
@@ -1956,20 +1954,20 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="text-right bg-orange-500/20 backdrop-blur border border-orange-500/40 px-8 py-5 rounded-3xl shadow-2xl">
+                  <div className="text-right bg-orange-500/20 backdrop-blur border border-orange-500/40 px-8 py-5 rounded-none shadow-2xl">
                     <p className="fancy-display text-4xl text-orange-400">{viewingPlayer.totalPoints.toFixed(2)} pts</p>
                     <p className="text-base text-gray-300 mt-1">{viewingPlayer.completedCount} Completions</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-base">
-                  <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-3xl space-y-3">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-none space-y-3">
                     <p className="goofy-title text-xl text-orange-500">Social Links</p>
                     <p className="text-gray-300">YouTube: {viewingPlayer.youtube || 'None'}</p>
                     <p className="text-gray-300">Discord: {viewingPlayer.discord || 'None'}</p>
                     <p className="text-gray-300">Twitter: {viewingPlayer.twitter || 'None'}</p>
                   </div>
-                  <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-3xl space-y-3">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-none space-y-3">
                     <p className="goofy-title text-xl text-orange-500">Player Bio</p>
                     <p className="text-gray-300 italic leading-relaxed">{viewingPlayer.bio || 'No bio description provided.'}</p>
                   </div>
@@ -1977,7 +1975,7 @@ export default function Home() {
 
                 {/* DEMONS COMPLETED, CREATED, PUBLISHED, VERIFIED */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-center">
-                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-none">
                     <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons completed</p>
                     <p className="text-base font-normal">
                       {viewingPlayer.entries.length > 0
@@ -1985,7 +1983,7 @@ export default function Home() {
                         : 'None'}
                     </p>
                   </div>
-                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-none">
                     <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons created</p>
                     <p className="text-base font-normal">
                       {viewingPlayer.createdLevels.length > 0
@@ -1993,7 +1991,7 @@ export default function Home() {
                         : 'None'}
                     </p>
                   </div>
-                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-none">
                     <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons published</p>
                     <p className="text-base font-normal">
                       {viewingPlayer.publishedLevels.length > 0
@@ -2001,7 +1999,7 @@ export default function Home() {
                         : 'None'}
                     </p>
                   </div>
-                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-2xl">
+                  <div className="bg-orange-500/10 border border-orange-500/25 p-5 rounded-none">
                     <p className="text-sm uppercase text-orange-400 font-bold mb-2">Demons verified</p>
                     <p className="text-base font-normal">
                       {viewingPlayer.verifiedLevels.length > 0
@@ -2012,7 +2010,7 @@ export default function Home() {
                 </div>
 
                 {/* GACHA INVENTORY COLLECTION */}
-                <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-3xl space-y-4">
+                <div className="bg-orange-500/10 border border-orange-500/25 p-7 rounded-none space-y-4">
                   <p className="goofy-title text-xl text-orange-500">Goofy Gacha Inventory Collection ({viewingPlayer.inventory?.length || 0})</p>
                   {(!viewingPlayer.inventory || viewingPlayer.inventory.length === 0) ? (
                     <p className="text-base text-gray-400">No demons rolled in Gacha yet!</p>
@@ -2022,7 +2020,7 @@ export default function Home() {
                         const lvl = approvedLevels.find((l) => l.id === lvlId)
                         if (!lvl) return null
                         return (
-                          <div key={idx} className="bg-black/30 border border-orange-500/30 p-4 rounded-2xl text-center space-y-2">
+                          <div key={idx} className="bg-black/30 border border-orange-500/30 p-4 rounded-none text-center space-y-2">
                             <p className="font-bold truncate text-base">{lvl.title}</p>
                             <p className="text-sm text-orange-400">{lvl.points} pts</p>
                           </div>
@@ -2067,7 +2065,7 @@ export default function Home() {
                         <input type="url" value={editBanner} onChange={(e) => setEditBanner(e.target.value)} className={inputClass} placeholder="https://..." />
                       </div>
                     </div>
-                    <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-base px-8 py-4 rounded-2xl transition shadow-xl font-bold">
+                    <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-base px-8 py-4 rounded-none transition shadow-xl font-bold">
                       Save Profile Settings
                     </button>
                   </form>
@@ -2079,12 +2077,12 @@ export default function Home() {
           {/* MINIGAMES TAB */}
           {activeTab === 'minigames' && (
             <div className="space-y-6 animate-panel">
-              <div className={`p-10 rounded-3xl border space-y-6 ${cardClass}`}>
+              <div className={`p-10 border space-y-6 rounded-none ${cardClass}`}>
                 <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/20 pb-4">Goofy Roulette</h2>
                 {rouletteLevel ? (
                   <div className="flex flex-col md:flex-row items-center gap-8">
                     {getYouTubeThumbnail(rouletteLevel.verification_url) && (
-                      <img src={getYouTubeThumbnail(rouletteLevel.verification_url)} alt="" className="w-72 h-40 object-cover rounded-2xl border" />
+                      <img src={getYouTubeThumbnail(rouletteLevel.verification_url)} alt="" className="w-72 h-40 object-cover border rounded-none" />
                     )}
                     <div className="flex-1 space-y-4 w-full">
                       <h3 className="goofy-title text-3xl">{rouletteLevel.title}</h3>
@@ -2099,7 +2097,7 @@ export default function Home() {
                           onChange={(e) => setRouletteAchievedPct(Number(e.target.value))}
                           className={`w-32 ${inputClass}`}
                         />
-                        <button onClick={handleRouletteDone} className="bg-orange-500 text-white px-8 py-3.5 rounded-2xl text-base font-bold shadow-xl">
+                        <button onClick={handleRouletteDone} className="bg-orange-500 text-white px-8 py-3.5 rounded-none text-base font-bold shadow-xl">
                           Next Level ➔
                         </button>
                       </div>
@@ -2113,7 +2111,7 @@ export default function Home() {
           {/* FORUM TAB */}
           {activeTab === 'forum' && (
             <div className="space-y-8 animate-panel">
-              <div className={`p-10 rounded-3xl border space-y-6 ${cardClass}`}>
+              <div className={`p-10 border space-y-6 rounded-none ${cardClass}`}>
                 <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/20 pb-4">Forum & Bug Reports</h2>
                 <form onSubmit={handleCreateForumPost} className="space-y-4">
                   <select value={postCategory} onChange={(e) => setPostCategory(e.target.value as any)} className={inputClass}>
@@ -2122,7 +2120,7 @@ export default function Home() {
                   </select>
                   <input required type="text" placeholder="Title..." value={postTitle} onChange={(e) => setPostTitle(e.target.value)} className={inputClass} />
                   <textarea required rows={4} placeholder="Message..." value={postContent} onChange={(e) => setPostContent(e.target.value)} className={inputClass} />
-                  <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-base px-8 py-4 rounded-2xl font-bold shadow-xl">
+                  <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white text-base px-8 py-4 rounded-none font-bold shadow-xl">
                     Submit Post
                   </button>
                 </form>
@@ -2135,9 +2133,9 @@ export default function Home() {
                   <p className="text-base text-gray-400">No forum posts yet. Be the first to start a discussion!</p>
                 ) : (
                   forumPosts.map((post) => (
-                    <div key={post.id} className={`p-8 rounded-3xl border space-y-3 ${cardClass}`}>
+                    <div key={post.id} className={`p-8 border space-y-3 rounded-none ${cardClass}`}>
                       <div className="flex items-center justify-between">
-                        <span className="bg-orange-500/20 text-orange-500 text-sm px-4 py-1.5 rounded-full uppercase font-bold">
+                        <span className="bg-orange-500/20 text-orange-500 text-sm px-4 py-1.5 uppercase font-bold rounded-none">
                           {post.category}
                         </span>
                         <span className="text-sm text-gray-400">By {post.author_display} (@{post.author_username})</span>
@@ -2153,7 +2151,7 @@ export default function Home() {
 
           {/* EXPANDED MOD PANEL */}
           {activeTab === 'mod' && isMod && (
-            <div className={`p-10 rounded-3xl border space-y-8 animate-panel ${cardClass}`}>
+            <div className={`p-10 border space-y-8 rounded-none animate-panel ${cardClass}`}>
               <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/25 pb-4">Expanded Moderator Panel</h2>
 
               {/* PENDING LEVEL APPROVALS */}
@@ -2163,7 +2161,7 @@ export default function Home() {
                   <p className="text-base text-gray-400">No pending level submissions.</p>
                 ) : (
                   pendingLevels.map((lvl) => (
-                    <div key={lvl.id} className="p-5 bg-orange-500/10 rounded-2xl flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                    <div key={lvl.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
                       <div>
                         <span>{lvl.title} by {lvl.creator}</span>
                         {lvl.verification_url && (
@@ -2173,8 +2171,8 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex gap-3">
-                        <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold">Approve</button>
-                        <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-bold">Reject</button>
+                        <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm font-bold">Approve</button>
+                        <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-none text-sm font-bold">Reject</button>
                       </div>
                     </div>
                   ))
@@ -2188,7 +2186,7 @@ export default function Home() {
                   <p className="text-base text-gray-400">No pending record submissions.</p>
                 ) : (
                   pendingSubs.map((sub) => (
-                    <div key={sub.id} className="p-5 bg-orange-500/10 rounded-2xl flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                    <div key={sub.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
                       <div>
                         <span>{sub.player_name} - {sub.progress}% on {sub.level_title}</span>
                         {sub.video_url && (
@@ -2198,8 +2196,8 @@ export default function Home() {
                         )}
                       </div>
                       <div className="flex gap-3">
-                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-bold">Approve</button>
-                        <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-bold">Reject</button>
+                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm font-bold">Approve</button>
+                        <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-none text-sm font-bold">Reject</button>
                       </div>
                     </div>
                   ))
@@ -2217,7 +2215,7 @@ export default function Home() {
                     onChange={(e) => setBulkPointMultiplier(e.target.value)}
                     className={inputClass}
                   />
-                  <button onClick={handleBulkScalePoints} className="bg-orange-500 text-white px-6 py-3.5 rounded-2xl text-base font-bold shrink-0">
+                  <button onClick={handleBulkScalePoints} className="bg-orange-500 text-white px-6 py-3.5 rounded-none text-base font-bold shrink-0">
                     Scale Points
                   </button>
                 </div>
@@ -2229,7 +2227,7 @@ export default function Home() {
                 <form onSubmit={handleIssueWarning} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <input type="text" placeholder="Username" value={warnTargetUser} onChange={(e) => setWarnTargetUser(e.target.value)} className={inputClass} />
                   <input type="text" placeholder="Reason" value={warnReason} onChange={(e) => setWarnReason(e.target.value)} className={inputClass} />
-                  <button type="submit" className="bg-red-600 text-white text-base rounded-2xl py-3.5 font-bold">Issue Warning</button>
+                  <button type="submit" className="bg-red-600 text-white text-base rounded-none py-3.5 font-bold">Issue Warning</button>
                 </form>
               </div>
 
@@ -2248,12 +2246,12 @@ export default function Home() {
                     <option value="editor">Editor</option>
                     <option value="helper">Helper</option>
                   </select>
-                  <button type="submit" className="sm:col-span-6 bg-orange-500 text-white text-base py-4 rounded-2xl font-bold">Add Staff Member</button>
+                  <button type="submit" className="sm:col-span-6 bg-orange-500 text-white text-base py-4 rounded-none font-bold">Add Staff Member</button>
                 </form>
 
                 <div className="space-y-3 pt-3">
                   {moderators.map((m) => (
-                    <div key={m.id} className="flex items-center justify-between bg-orange-500/10 px-5 py-3.5 rounded-2xl text-base">
+                    <div key={m.id} className="flex items-center justify-between bg-orange-500/10 border border-orange-500/20 px-5 py-3.5 rounded-none text-base">
                       <span>{m.clan ? `[${m.clan}] ` : ''}{m.name} ({m.role})</span>
                       <button onClick={() => handleRemoveStaff(m.id)} className="text-red-500 hover:underline font-bold">Remove</button>
                     </div>
@@ -2291,11 +2289,11 @@ export default function Home() {
                         setViewingLevel(lvl)
                         setActiveTab('level_detail')
                       }}
-                      className={`p-6 sm:p-8 rounded-3xl border flex flex-col sm:flex-row items-center justify-between gap-6 cursor-pointer hover:border-orange-500 transition ${cardClass}`}
+                      className={`p-6 sm:p-8 border flex flex-col sm:flex-row items-center justify-between gap-6 cursor-pointer hover:border-orange-500 transition rounded-none ${cardClass}`}
                     >
                       <div className="flex items-center gap-6 w-full sm:w-auto">
                         <span className="fancy-display text-4xl text-orange-500 w-14">#{index + 1}</span>
-                        {thumb && <img src={thumb} alt="" className="w-48 h-28 object-cover rounded-2xl border-2 border-orange-400 shadow" />}
+                        {thumb && <img src={thumb} alt="" className="w-48 h-28 object-cover border-2 border-orange-400 rounded-none shadow" />}
                         <div className="space-y-1.5">
                           <h3 className="goofy-title text-2xl sm:text-3xl hover:text-orange-500 transition">{lvl.title}</h3>
                           <p className="text-base text-gray-400">By {lvl.creator} • Verified by {lvl.verifier || 'Unknown'}</p>
@@ -2310,8 +2308,8 @@ export default function Home() {
                         </div>
                         {isMod && (
                           <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => setEditingLevel(lvl)} className="bg-orange-500 text-white text-base px-5 py-2.5 rounded-2xl font-bold">Edit</button>
-                            <button onClick={() => handleDeleteLevel(lvl.id, lvl.title)} className="bg-red-600 text-white text-base px-5 py-2.5 rounded-2xl font-bold">Delete</button>
+                            <button onClick={() => setEditingLevel(lvl)} className="bg-orange-500 text-white text-base px-5 py-2.5 rounded-none font-bold">Edit</button>
+                            <button onClick={() => handleDeleteLevel(lvl.id, lvl.title)} className="bg-red-600 text-white text-base px-5 py-2.5 rounded-none font-bold">Delete</button>
                           </div>
                         )}
                       </div>
@@ -2325,10 +2323,10 @@ export default function Home() {
           {/* LEVEL EDIT MODAL */}
           {editingLevel && isMod && (
             <div onClick={() => setEditingLevel(null)} className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 overflow-y-auto">
-              <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-xl w-full p-8 sm:p-10 rounded-3xl border space-y-5 animate-panel ${cardClass}`}>
+              <form onClick={(e) => e.stopPropagation()} onSubmit={handleSaveEditedLevel} className={`max-w-xl w-full p-8 sm:p-10 border space-y-5 rounded-none animate-panel ${cardClass}`}>
                 <div className="flex justify-between items-center border-b border-orange-500/25 pb-4">
                   <h3 className="fancy-display text-3xl text-orange-500">Edit Level Details</h3>
-                  <button type="button" onClick={() => setEditingLevel(null)} className="text-base bg-orange-500/15 text-orange-500 px-4 py-2 rounded-2xl font-bold">Cancel</button>
+                  <button type="button" onClick={() => setEditingLevel(null)} className="text-base bg-orange-500/15 text-orange-500 px-4 py-2 rounded-none font-bold">Cancel</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -2388,7 +2386,7 @@ export default function Home() {
                   <input type="url" value={editingLevel.verification_url || ''} onChange={(e) => setEditingLevel({ ...editingLevel, verification_url: e.target.value })} className={inputClass} />
                 </div>
 
-                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white text-base py-4 rounded-2xl transition font-bold shadow-xl">
+                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white text-base py-4 rounded-none transition font-bold shadow-xl">
                   Save Level Changes
                 </button>
               </form>
@@ -2397,7 +2395,7 @@ export default function Home() {
 
           {/* AUTHENTICATION TABS */}
           {activeTab === 'login' && (
-            <div className={`max-w-md mx-auto p-10 rounded-3xl border space-y-6 animate-panel ${cardClass}`}>
+            <div className={`max-w-md mx-auto p-10 border space-y-6 rounded-none animate-panel ${cardClass}`}>
               <h2 className="fancy-display text-3xl text-orange-500 text-center">Login to GLL</h2>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
@@ -2408,7 +2406,7 @@ export default function Home() {
                   <label className="block text-base mb-2">Password</label>
                   <input required type="password" value={loginPass} onChange={(e) => setLoginPass(e.target.value)} className={inputClass} />
                 </div>
-                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-bold shadow-xl">
+                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-none font-bold shadow-xl">
                   Login
                 </button>
               </form>
@@ -2416,7 +2414,7 @@ export default function Home() {
           )}
 
           {activeTab === 'register' && (
-            <div className={`max-w-md mx-auto p-10 rounded-3xl border space-y-6 animate-panel ${cardClass}`}>
+            <div className={`max-w-md mx-auto p-10 border space-y-6 rounded-none animate-panel ${cardClass}`}>
               <h2 className="fancy-display text-3xl text-orange-500 text-center">Register Account</h2>
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
@@ -2435,7 +2433,7 @@ export default function Home() {
                   <label className="block text-base mb-1">Password</label>
                   <input required type="password" minLength={6} value={regPass} onChange={(e) => setRegPass(e.target.value)} className={inputClass} />
                 </div>
-                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-2xl font-bold shadow-xl">
+                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-none font-bold shadow-xl">
                   Create Account
                 </button>
               </form>
