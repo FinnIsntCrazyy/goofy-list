@@ -1047,19 +1047,19 @@ export default function Home() {
         }
       `}</style>
 
-      {/* VERY SMALL AND THIN SIDE WAVES */}
+      {/* CORRECTED SIDE WAVES (SMOOTH & CLEAN DECORATION) */}
       {sideDecor && (
         <>
-          <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-3 z-40 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 12 800" preserveAspectRatio="none" className="w-full h-full">
-              <path d="M0,0 L9,0 C12,130 3,260 8,400 C12,540 2,670 9,800 L0,800 Z" fill="#ea580c" opacity="0.4" />
-              <path d="M0,0 L5,0 C8,130 1,260 4,400 C7,540 1,670 5,800 L0,800 Z" fill="#f97316" opacity="0.8" />
+          <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-6 z-40 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 24 800" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M0,0 L20,0 C24,130 8,260 16,400 C24,540 6,670 18,800 L0,800 Z" fill="#ea580c" opacity="0.35" />
+              <path d="M0,0 L12,0 C16,130 4,260 10,400 C16,540 2,670 10,800 L0,800 Z" fill="#f97316" opacity="0.75" />
             </svg>
           </div>
-          <div aria-hidden="true" className="fixed right-0 top-0 bottom-0 w-3 z-40 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 12 800" preserveAspectRatio="none" className="w-full h-full">
-              <path d="M12,0 L3,0 C0,130 9,260 4,400 C0,540 10,670 3,800 L12,800 Z" fill="#ea580c" opacity="0.4" />
-              <path d="M12,0 L7,0 C4,130 11,260 8,400 C5,540 11,670 7,800 L12,800 Z" fill="#f97316" opacity="0.8" />
+          <div aria-hidden="true" className="fixed right-0 top-0 bottom-0 w-6 z-40 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 24 800" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M24,0 L4,0 C0,130 16,260 8,400 C0,540 18,670 6,800 L24,800 Z" fill="#ea580c" opacity="0.35" />
+              <path d="M24,0 L12,0 C8,130 20,260 14,400 C8,540 22,670 14,800 L24,800 Z" fill="#f97316" opacity="0.75" />
             </svg>
           </div>
         </>
@@ -1117,7 +1117,7 @@ export default function Home() {
 
             {currentUser ? (
               <div className="flex items-center gap-3">
-                {renderAvatar(currentUser, 'w-10 h-10 text-sm')}
+                {renderAvatar(currentUser, 'w-10 h-10 text-sm rounded-full')}
                 <button
                   onClick={() => {
                     const row = getLeaderboardForMode('classic').find((p) => p.id === currentUser.id) || {
@@ -1911,7 +1911,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* PROFILE PAGE WITH STRICTLY ROUND AVATAR & POINTERCRATE LAYOUT */}
+          {/* PROFILE PAGE WITH PERFECTLY ROUND AVATAR & OVERLAPPING FLAG */}
           {activeTab === 'profile' && viewingPlayer && (
             <div className={`max-w-4xl mx-auto rounded-3xl border overflow-hidden space-y-8 animate-panel ${cardClass}`}>
               <div className="relative h-64 sm:h-72 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
@@ -1940,7 +1940,7 @@ export default function Home() {
                       <img
                         src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
                         alt=""
-                        className="absolute -bottom-1 -right-1 w-9 h-6 object-cover border-2 border-white rounded shadow"
+                        className="absolute bottom-0 right-0 w-9 h-6 object-cover border-2 border-white rounded shadow-md"
                       />
                     </div>
                     <div>
