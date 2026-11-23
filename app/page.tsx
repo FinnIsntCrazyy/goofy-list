@@ -1047,22 +1047,19 @@ export default function Home() {
         }
       `}</style>
 
+      {/* VERY SMALL AND THIN SIDE WAVES */}
       {sideDecor && (
         <>
-          <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-8 sm:w-14 z-40 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 60 800" preserveAspectRatio="none" className="w-full h-full">
-              <path d="M0,0 L48,0 C62,130 22,260 44,400 C64,540 20,670 46,800 L0,800 Z" fill="#ea580c" opacity="0.35" />
-              <path d="M0,0 L36,0 C50,130 14,260 34,400 C52,540 12,670 36,800 L0,800 Z" fill="#f97316" opacity="0.6" />
-              <path d="M0,0 L24,0 C38,130 6,260 24,400 C40,540 4,670 24,800 L0,800 Z" fill="#fb923c" opacity="0.85" />
-              <path d="M0,0 L12,0 C24,130 0,260 14,400 C26,540 0,670 14,800 L0,800 Z" fill="#fdba74" />
+          <div aria-hidden="true" className="fixed left-0 top-0 bottom-0 w-3 z-40 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 12 800" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M0,0 L9,0 C12,130 3,260 8,400 C12,540 2,670 9,800 L0,800 Z" fill="#ea580c" opacity="0.4" />
+              <path d="M0,0 L5,0 C8,130 1,260 4,400 C7,540 1,670 5,800 L0,800 Z" fill="#f97316" opacity="0.8" />
             </svg>
           </div>
-          <div aria-hidden="true" className="fixed right-0 top-0 bottom-0 w-8 sm:w-14 z-40 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 60 800" preserveAspectRatio="none" className="w-full h-full">
-              <path d="M60,0 L12,0 C-2,130 38,260 16,400 C-4,540 40,670 14,800 L60,800 Z" fill="#ea580c" opacity="0.35" />
-              <path d="M60,0 L24,0 C10,130 46,260 26,400 C8,540 48,670 24,800 L60,800 Z" fill="#f97316" opacity="0.6" />
-              <path d="M60,0 L36,0 C22,130 54,260 36,400 C20,540 56,670 36,800 L60,800 Z" fill="#fb923c" opacity="0.85" />
-              <path d="M60,0 L48,0 C36,130 60,260 46,400 C34,540 60,670 46,800 L60,800 Z" fill="#fdba74" />
+          <div aria-hidden="true" className="fixed right-0 top-0 bottom-0 w-3 z-40 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 12 800" preserveAspectRatio="none" className="w-full h-full">
+              <path d="M12,0 L3,0 C0,130 9,260 4,400 C0,540 10,670 3,800 L12,800 Z" fill="#ea580c" opacity="0.4" />
+              <path d="M12,0 L7,0 C4,130 11,260 8,400 C5,540 11,670 7,800 L12,800 Z" fill="#f97316" opacity="0.8" />
             </svg>
           </div>
         </>
@@ -1623,91 +1620,120 @@ export default function Home() {
               <div className={`rounded-3xl border overflow-hidden ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-8 text-center space-y-4">
                   
-                  {/* WORLD MAP MATCHING SPECIFIED IMAGE LAYOUT & DYNAMIC HEATMAP SHADING */}
+                  {/* DETAILED CLICKABLE COUNTRIES WORLD MAP WITH HEATMAP SHADING */}
                   <div className="max-w-3xl mx-auto p-4 bg-[#09090b]/80 rounded-3xl border border-orange-500/30">
-                    <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click a Country on the Map to Filter</p>
+                    <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click an Individual Country on the Map to Filter</p>
                     <svg viewBox="0 0 1000 500" className="w-full h-64 sm:h-80">
                       <g stroke={darkMode ? '#333b48' : '#ffffff'} strokeWidth="1">
-                        {/* North America / US & Canada */}
+                        {/* United States */}
                         <path
-                          d="M80,60 L280,40 L310,120 L270,180 L230,170 L200,240 L160,260 L140,210 L100,190 L70,120 Z"
+                          d="M130,120 Q170,90 220,110 T260,160 Q240,210 180,230 T120,190 Z"
                           fill={getCountryColor('us')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('us'); setLbPage(0); }}
                         >
                           <title>United States ({countryPlayerCounts['us'] || 0} players)</title>
                         </path>
+
+                        {/* Canada */}
                         <path
-                          d="M70,40 L280,20 L300,50 L80,70 Z"
+                          d="M110,65 Q180,35 260,65 T290,115 Q200,120 110,65 Z"
                           fill={getCountryColor('ca')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('ca'); setLbPage(0); }}
                         >
                           <title>Canada ({countryPlayerCounts['ca'] || 0} players)</title>
                         </path>
-                        {/* South America / Brazil */}
+
+                        {/* Brazil */}
                         <path
-                          d="M240,260 L310,270 L340,360 L300,430 L250,380 L220,300 Z"
+                          d="M240,270 Q280,280 300,340 T270,420 Q230,440 215,360 T240,270 Z"
                           fill={getCountryColor('br')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('br'); setLbPage(0); }}
                         >
                           <title>Brazil ({countryPlayerCounts['br'] || 0} players)</title>
                         </path>
-                        {/* Europe / Poland / UK / Germany */}
+
+                        {/* United Kingdom */}
                         <path
-                          d="M480,70 L550,60 L580,120 L530,170 L470,160 L460,110 Z"
-                          fill={getCountryColor('pl')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
-                        >
-                          <title>Poland ({countryPlayerCounts['pl'] || 0} players)</title>
-                        </path>
-                        <path
-                          d="M440,80 L470,75 L475,110 L445,115 Z"
+                          d="M450,95 Q465,90 470,115 T450,125 Z"
                           fill={getCountryColor('gb')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('gb'); setLbPage(0); }}
                         >
                           <title>United Kingdom ({countryPlayerCounts['gb'] || 0} players)</title>
                         </path>
+
+                        {/* France */}
                         <path
-                          d="M485,95 L515,90 L520,125 L490,130 Z"
+                          d="M475,125 Q495,120 500,145 T475,155 Z"
+                          fill={getCountryColor('fr')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('fr'); setLbPage(0); }}
+                        >
+                          <title>France ({countryPlayerCounts['fr'] || 0} players)</title>
+                        </path>
+
+                        {/* Germany */}
+                        <path
+                          d="M505,115 Q525,110 530,135 T505,145 Z"
                           fill={getCountryColor('de')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('de'); setLbPage(0); }}
                         >
                           <title>Germany ({countryPlayerCounts['de'] || 0} players)</title>
                         </path>
-                        {/* Africa */}
+
+                        {/* Poland */}
                         <path
-                          d="M470,190 L560,180 L590,320 L530,400 L460,330 L450,220 Z"
-                          fill={getCountryColor('za')}
-                        />
-                        {/* Asia / Russia / Japan */}
+                          d="M535,110 Q555,105 560,130 T535,140 Z"
+                          fill={getCountryColor('pl')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
+                        >
+                          <title>Poland ({countryPlayerCounts['pl'] || 0} players)</title>
+                        </path>
+
+                        {/* Spain */}
                         <path
-                          d="M590,40 L880,30 L930,180 L820,240 L700,220 L620,160 Z"
-                          fill={getCountryColor('ru')}
-                        />
+                          d="M455,155 Q475,150 480,175 T455,185 Z"
+                          fill={getCountryColor('es')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('es'); setLbPage(0); }}
+                        >
+                          <title>Spain ({countryPlayerCounts['es'] || 0} players)</title>
+                        </path>
+
+                        {/* Italy */}
                         <path
-                          d="M890,130 L930,120 L935,160 L895,170 Z"
+                          d="M515,150 Q530,145 535,175 T515,190 Z"
+                          fill={getCountryColor('it')}
+                          className="cursor-pointer hover:opacity-80 transition"
+                          onClick={() => { setSelectedCountryFilter('it'); setLbPage(0); }}
+                        >
+                          <title>Italy ({countryPlayerCounts['it'] || 0} players)</title>
+                        </path>
+
+                        {/* Japan */}
+                        <path
+                          d="M890,140 Q910,135 915,165 T890,175 Z"
                           fill={getCountryColor('jp')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('jp'); setLbPage(0); }}
                         >
                           <title>Japan ({countryPlayerCounts['jp'] || 0} players)</title>
                         </path>
+
                         {/* Australia */}
                         <path
-                          d="M800,300 L890,290 L910,380 L810,390 Z"
+                          d="M790,320 Q850,315 880,355 T815,435 Q770,405 790,320 Z"
                           fill={getCountryColor('au')}
                           className="cursor-pointer hover:opacity-80 transition"
                           onClick={() => { setSelectedCountryFilter('au'); setLbPage(0); }}
                         >
                           <title>Australia ({countryPlayerCounts['au'] || 0} players)</title>
                         </path>
-                        {/* Antarctica base layer */}
-                        <path d="M100,430 L900,430 L920,490 L80,490 Z" fill={darkMode ? '#18181b' : '#94a3b8'} />
                       </g>
                     </svg>
                   </div>
@@ -1885,7 +1911,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* PROFILE PAGE WITH POINTERCRATE LAYOUT STYLE */}
+          {/* PROFILE PAGE WITH STRICTLY ROUND AVATAR & POINTERCRATE LAYOUT */}
           {activeTab === 'profile' && viewingPlayer && (
             <div className={`max-w-4xl mx-auto rounded-3xl border overflow-hidden space-y-8 animate-panel ${cardClass}`}>
               <div className="relative h-64 sm:h-72 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
@@ -1910,7 +1936,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6">
                   <div className="flex items-end gap-5">
                     <div className="relative">
-                      {renderAvatar(viewingPlayer, 'w-28 h-28 text-4xl shadow-2xl')}
+                      {renderAvatar(viewingPlayer, 'w-28 h-28 text-4xl shadow-2xl rounded-full')}
                       <img
                         src={`https://flagcdn.com/w40/${viewingPlayer.country.toLowerCase()}.png`}
                         alt=""
