@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'paulhsu123', 'dhavvin_09', 'lopikpl']
@@ -200,7 +200,7 @@ export default function Home() {
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
   const [activeTab, setActiveTab] = useState<
-    'welcome' | 'list' | 'level_detail' | 'leaderboard' | 'gacha' | 'wheel' | 'minigames' | 'forum' | 'profile' | 'mod' | 'login' | 'register'
+    'welcome' | 'list' | 'level_detail' | 'leaderboard' | 'gacha' | 'wheel' | 'games' | 'minigames' | 'forum' | 'profile' | 'mod' | 'login' | 'register'
   >('welcome')
   const [selectedListMode, setSelectedListMode] = useState<ListCategory>('classic')
   const [listsDropdownOpen, setListsDropdownOpen] = useState(false)
@@ -265,6 +265,11 @@ export default function Home() {
   const [modRole, setModRole] = useState<'editor' | 'helper'>('editor')
   const [bulkPointMultiplier, setBulkPointMultiplier] = useState('1.10')
 
+  // Mod panel accordion toggles
+  const [modOpenApproved, setModOpenApproved] = useState(true)
+  const [modOpenPendingLevels, setModOpenPendingLevels] = useState(true)
+  const [modOpenPendingRecords, setModOpenPendingRecords] = useState(true)
+
   const [editingLevel, setEditingLevel] = useState<GoofyLevel | null>(null)
   const [viewingLevel, setViewingLevel] = useState<GoofyLevel | null>(null)
   const [viewingPlayer, setViewingPlayer] = useState<PlayerLeaderboardRow | null>(null)
@@ -273,7 +278,8 @@ export default function Home() {
   const [lbSearch, setLbSearch] = useState('')
   const [selectedStatsPlayerId, setSelectedStatsPlayerId] = useState<string>('')
 
-  // Demon Wheel state
+  // Demon Wheel state with custom selected levels
+  const [selectedWheelLevelIds, setSelectedWheelLevelIds] = useState<number[]>([])
   const [wheelSpinning, setWheelSpinning] = useState(false)
   const [wheelSelectedLevel, setWheelSelectedLevel] = useState<GoofyLevel | null>(null)
   const [wheelRotation, setWheelRotation] = useState(0)
@@ -351,7 +357,13 @@ export default function Home() {
       supabase.from('moderators').select('*').order('id', { ascending: true }),
       supabase.from('forum_posts').select('*').order('created_at', { ascending: false }),
     ])
-    if (lvlRes.data) setLevels(lvlRes.data)
+    if (lvlRes.data) {
+      setLevels(lvlRes.data)
+      // Default select all approved levels for the wheel if none selected
+      if (selectedWheelLevelIds.length === 0) {
+        setSelectedWheelLevelIds(lvlRes.data.filter((l: GoofyLevel) => (l.status || 'approved') === 'approved').map((l: GoofyLevel) => l.id))
+      }
+    }
     if (subRes.data) setSubmissions(subRes.data)
     if (profRes.data) setProfiles(profRes.data)
     if (modRes.data) setModerators(modRes.data)
@@ -762,8 +774,9 @@ export default function Home() {
   }
 
   function handleSpinDemonWheel() {
-    if (approvedLevels.length === 0) {
-      alert('No approved levels available on the wheel.')
+    const candidateLevels = approvedLevels.filter((l) => selectedWheelLevelIds.includes(l.id))
+    if (candidateLevels.length === 0) {
+      alert('Please select at least one level for the wheel!')
       return
     }
     setWheelSpinning(true)
@@ -771,7 +784,7 @@ export default function Home() {
     setWheelRotation((prev) => prev + 1800 + Math.floor(Math.random() * 360))
 
     setTimeout(() => {
-      const randomLvl = approvedLevels[Math.floor(Math.random() * approvedLevels.length)]
+      const randomLvl = candidateLevels[Math.floor(Math.random() * candidateLevels.length)]
       setWheelSelectedLevel(randomLvl)
       setWheelSpinning(false)
     }, 2000)
@@ -1256,17 +1269,14 @@ export default function Home() {
 
             {[
               { id: 'leaderboard', label: `Leaderboard (${listLabels[selectedListMode]})` },
-              { id: 'gacha', label: 'Goofy Gacha' },
-              { id: 'wheel', label: 'Demon Wheel' },
-              { id: 'minigames', label: 'Roulette' },
+              { id: 'games', label: 'Games' },
               { id: 'forum', label: 'Forum & Bugs' },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => {
                   setListsDropdownOpen(false)
-                  if (tab.id === 'minigames') startRouletteChallenge()
-                  else setActiveTab(tab.id as any)
+                  setActiveTab(tab.id as any)
                 }}
                 className={`px-5 py-4 border-b-2 transition-all ${
                   activeTab === tab.id ? 'border-orange-500 text-orange-500' : 'border-transparent hover:text-orange-500'
@@ -1684,57 +1694,20 @@ export default function Home() {
                     <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click Any Country on the Map to Filter</p>
                     <svg viewBox="0 0 1000 500" className="w-full h-72 sm:h-96">
                       <g stroke={darkMode ? '#333b48' : '#cbd5e1'} strokeWidth="0.75">
-                        {/* North America & Central America */}
                         <path d="M110,65 Q180,35 260,65 T290,115 Q200,120 110,65 Z" fill={getCountryColor('ca')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ca')}><title>Canada</title></path>
                         <path d="M130,120 Q170,90 220,110 T260,160 Q240,210 180,230 T120,190 Z" fill={getCountryColor('us')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('us')}><title>United States</title></path>
                         <path d="M170,230 Q220,225 240,270 T190,290 Z" fill={getCountryColor('mx')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('mx')}><title>Mexico</title></path>
-                        <path d="M210,295 Q240,290 250,310 T215,320 Z" fill={getCountryColor('gt')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('gt')}><title>Guatemala</title></path>
-                        <path d="M230,140 Q250,135 255,160 T230,165 Z" fill={getCountryColor('cu')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('cu')}><title>Cuba</title></path>
-
-                        {/* South America */}
                         <path d="M240,270 Q280,280 300,340 T270,420 Q230,440 215,360 T240,270 Z" fill={getCountryColor('br')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('br')}><title>Brazil</title></path>
-                        <path d="M215,290 Q250,295 240,360 T210,400 Z" fill={getCountryColor('co')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('co')}><title>Colombia</title></path>
-                        <path d="M205,390 Q235,400 230,460 T200,470 Z" fill={getCountryColor('pe')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('pe')}><title>Peru</title></path>
-                        <path d="M210,470 Q235,480 225,540 T195,540 Z" fill={getCountryColor('cl')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('cl')}><title>Chile</title></path>
-                        <path d="M245,420 Q285,430 270,490 T235,480 Z" fill={getCountryColor('ar')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ar')}><title>Argentina</title></path>
-
-                        {/* Europe */}
                         <path d="M450,95 Q465,90 470,115 T450,125 Z" fill={getCountryColor('gb')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('gb')}><title>United Kingdom</title></path>
-                        <path d="M440,110 Q455,105 460,120 T440,130 Z" fill={getCountryColor('ie')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ie')}><title>Ireland</title></path>
                         <path d="M475,125 Q495,120 500,145 T475,155 Z" fill={getCountryColor('fr')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('fr')}><title>France</title></path>
                         <path d="M505,115 Q525,110 530,135 T505,145 Z" fill={getCountryColor('de')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('de')}><title>Germany</title></path>
                         <path d="M535,110 Q555,105 560,130 T535,140 Z" fill={getCountryColor('pl')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('pl')}><title>Poland</title></path>
                         <path d="M455,155 Q475,150 480,175 T455,185 Z" fill={getCountryColor('es')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('es')}><title>Spain</title></path>
-                        <path d="M485,160 Q495,155 500,175 T485,180 Z" fill={getCountryColor('pt')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('pt')}><title>Portugal</title></path>
                         <path d="M515,150 Q530,145 535,175 T515,190 Z" fill={getCountryColor('it')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('it')}><title>Italy</title></path>
-                        <path d="M545,145 Q565,140 575,170 T545,180 Z" fill={getCountryColor('ro')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ro')}><title>Romania</title></path>
-                        <path d="M535,80 Q565,75 580,105 T535,115 Z" fill={getCountryColor('se')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('se')}><title>Sweden</title></path>
-                        <path d="M515,85 Q535,80 540,110 T515,115 Z" fill={getCountryColor('no')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('no')}><title>Norway</title></path>
                         <path d="M570,70 Q660,60 700,120 T580,140 Z" fill={getCountryColor('ru')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ru')}><title>Russia</title></path>
-                        <path d="M495,125 Q510,120 515,135 T495,140 Z" fill={getCountryColor('ch')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ch')}><title>Switzerland</title></path>
-                        <path d="M480,135 Q500,130 505,145 T480,150 Z" fill={getCountryColor('nl')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('nl')}><title>Netherlands</title></path>
-                        <path d="M565,130 Q585,125 590,150 T565,160 Z" fill={getCountryColor('ua')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ua')}><title>Ukraine</title></path>
-
-                        {/* Africa */}
-                        <path d="M470,210 Q530,205 550,280 T510,360 Q460,350 450,280 Z" fill={getCountryColor('eg')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('eg')}><title>Egypt</title></path>
-                        <path d="M430,225 Q465,220 470,270 T435,280 Z" fill={getCountryColor('dz')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('dz')}><title>Algeria</title></path>
-                        <path d="M485,340 Q535,350 520,440 T470,430 Z" fill={getCountryColor('za')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('za')}><title>South Africa</title></path>
-                        <path d="M460,290 Q510,295 500,360 T455,350 Z" fill={getCountryColor('ao')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ao')}><title>Angola</title></path>
-
-                        {/* Asia */}
                         <path d="M620,130 Q720,110 780,180 T700,260 Q630,250 620,130 Z" fill={getCountryColor('cn')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('cn')}><title>China</title></path>
                         <path d="M890,140 Q910,135 915,165 T890,175 Z" fill={getCountryColor('jp')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('jp')}><title>Japan</title></path>
-                        <path d="M840,165 Q860,160 865,185 T840,195 Z" fill={getCountryColor('kr')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('kr')}><title>South Korea</title></path>
-                        <path d="M680,210 Q725,200 735,260 T675,270 Z" fill={getCountryColor('in')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('in')}><title>India</title></path>
-                        <path d="M740,240 Q770,235 775,275 T735,285 Z" fill={getCountryColor('th')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('th')}><title>Thailand</title></path>
-                        <path d="M750,285 Q790,280 800,330 T740,340 Z" fill={getCountryColor('id')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('id')}><title>Indonesia</title></path>
-                        <path d="M780,265 Q800,260 805,290 T780,300 Z" fill={getCountryColor('vn')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('vn')}><title>Vietnam</title></path>
-                        <path d="M585,175 Q615,170 625,210 T585,220 Z" fill={getCountryColor('tr')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('tr')}><title>Turkey</title></path>
-                        <path d="M630,225 Q655,220 660,250 T630,260 Z" fill={getCountryColor('sa')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('sa')}><title>Saudi Arabia</title></path>
-
-                        {/* Oceania */}
                         <path d="M790,320 Q850,315 880,355 T815,435 Q770,405 790,320 Z" fill={getCountryColor('au')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('au')}><title>Australia</title></path>
-                        <path d="M900,415 Q925,410 930,445 T895,450 Z" fill={getCountryColor('nz')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('nz')}><title>New Zealand</title></path>
                       </g>
                     </svg>
                   </div>
@@ -1767,7 +1740,6 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 border-t border-orange-500/25">
-                  {/* INFINITE SCROLLING PLAYER LIST */}
                   <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-orange-500/25 p-6 flex flex-col justify-between space-y-6">
                     <div className="space-y-4">
                       <input
@@ -1850,10 +1822,56 @@ export default function Home() {
             </div>
           )}
 
+          {/* GAMES TAB (CONTAINING GACHA, DEMON WHEEL, ROULETTE) */}
+          {activeTab === 'games' && (
+            <div className="space-y-8 animate-panel">
+              <div className="text-center space-y-3">
+                <h1 className="fancy-display text-4xl sm:text-5xl text-orange-500">GLL Games & Minigames</h1>
+                <p className="text-lg text-gray-400">Play, roll, and test your Geometry Dash skills!</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className={`p-8 border flex flex-col justify-between space-y-6 rounded-none ${cardClass}`}>
+                  <div className="space-y-3">
+                    <div className="text-5xl">🎁</div>
+                    <h3 className="goofy-title text-2xl text-orange-500">Goofy Gacha</h3>
+                    <p className="text-base text-gray-400">Roll random demons every hour and collect them in your inventory profile.</p>
+                  </div>
+                  <button onClick={() => setActiveTab('gacha')} className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-none font-bold">
+                    Play Goofy Gacha ➔
+                  </button>
+                </div>
+
+                <div className={`p-8 border flex flex-col justify-between space-y-6 rounded-none ${cardClass}`}>
+                  <div className="space-y-3">
+                    <div className="text-5xl">🎡</div>
+                    <h3 className="goofy-title text-2xl text-orange-500">Demon Wheel</h3>
+                    <p className="text-base text-gray-400">Select specific list levels and spin the wheel with thumbnails and names.</p>
+                  </div>
+                  <button onClick={() => setActiveTab('wheel')} className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-none font-bold">
+                    Play Demon Wheel ➔
+                  </button>
+                </div>
+
+                <div className={`p-8 border flex flex-col justify-between space-y-6 rounded-none ${cardClass}`}>
+                  <div className="space-y-3">
+                    <div className="text-5xl">🎯</div>
+                    <h3 className="goofy-title text-2xl text-orange-500">Goofy Roulette</h3>
+                    <p className="text-base text-gray-400">Challenge yourself with randomized percentage targets across list demons.</p>
+                  </div>
+                  <button onClick={() => { startRouletteChallenge(); setActiveTab('minigames'); }} className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-none font-bold">
+                    Play Roulette ➔
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* GOOFY GACHA TAB */}
           {activeTab === 'gacha' && (
             <div className={`p-10 border text-center space-y-8 rounded-none animate-panel ${cardClass}`}>
               <div className="space-y-3">
+                <button onClick={() => setActiveTab('games')} className="text-orange-500 hover:underline text-sm mb-2">← Back to Games</button>
                 <span className="bg-orange-500/20 text-orange-500 px-5 py-2 rounded-none text-base">Goofy Gacha Minigame</span>
                 <h2 className="fancy-display text-4xl text-orange-500">Spin the Demon Gacha!</h2>
                 <p className="text-lg text-gray-400 max-w-xl mx-auto">
@@ -1903,24 +1921,81 @@ export default function Home() {
             </div>
           )}
 
-          {/* DEMON WHEEL TAB (WHEEL OF FATE WITH LIST LEVELS & THUMBNAILS) */}
+          {/* DEMON WHEEL TAB (HORIZONTAL UI WITH CUSTOM LEVEL SELECTOR & THUMBNAILS) */}
           {activeTab === 'wheel' && (
-            <div className={`p-10 border text-center space-y-8 rounded-none animate-panel ${cardClass}`}>
-              <div className="space-y-3">
+            <div className={`p-10 border space-y-8 rounded-none animate-panel ${cardClass}`}>
+              <div className="text-center space-y-3">
+                <button onClick={() => setActiveTab('games')} className="text-orange-500 hover:underline text-sm mb-2">← Back to Games</button>
                 <span className="bg-orange-500/20 text-orange-500 px-5 py-2 rounded-none text-base">Demon Wheel of Fate</span>
-                <h2 className="fancy-display text-4xl text-orange-500">Spin the Wheel of List Levels!</h2>
+                <h2 className="fancy-display text-4xl text-orange-500">Custom Demon Wheel</h2>
                 <p className="text-lg text-gray-400 max-w-xl mx-auto">
-                  Test your fate! Spin the wheel to randomly select a list level for your next challenge session.
+                  Select specific levels below to include them on the wheel, then spin for your next challenge!
                 </p>
               </div>
 
-              <div className="max-w-lg mx-auto p-8 bg-black/40 border border-orange-500/40 space-y-6 shadow-2xl rounded-none">
+              {/* HORIZONTAL LEVEL SELECTOR CONTAINER */}
+              <div className="space-y-4 bg-black/20 p-6 border border-orange-500/30 rounded-none">
+                <div className="flex items-center justify-between">
+                  <h3 className="goofy-title text-xl text-orange-500">Select Levels for Wheel ({selectedWheelLevelIds.length} selected)</h3>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSelectedWheelLevelIds(approvedLevels.map((l) => l.id))}
+                      className="bg-orange-500/20 text-orange-500 hover:bg-orange-500 hover:text-white px-4 py-2 text-sm rounded-none font-bold transition"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={() => setSelectedWheelLevelIds([])}
+                      className="bg-gray-700/40 text-gray-300 hover:bg-gray-700 px-4 py-2 text-sm rounded-none font-bold transition"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 overflow-x-auto pb-4 pt-2">
+                  {approvedLevels.map((lvl) => {
+                    const isChecked = selectedWheelLevelIds.includes(lvl.id)
+                    const thumb = lvl.thumbnail || getYouTubeThumbnail(lvl.verification_url)
+                    return (
+                      <div
+                        key={lvl.id}
+                        onClick={() => {
+                          setSelectedWheelLevelIds((prev) =>
+                            isChecked ? prev.filter((id) => id !== lvl.id) : [...prev, lvl.id]
+                          )
+                        }}
+                        className={`min-w-[180px] max-w-[180px] p-3 border cursor-pointer rounded-none transition flex flex-col justify-between ${
+                          isChecked ? 'bg-orange-500/25 border-orange-500 text-white' : 'bg-black/40 border-gray-700 text-gray-400 opacity-65'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          {thumb ? (
+                            <img src={thumb} alt="" className="w-full h-24 object-cover border border-orange-500/30 rounded-none" />
+                          ) : (
+                            <div className="w-full h-24 bg-gray-800 flex items-center justify-center text-xs">No Thumb</div>
+                          )}
+                          <p className="font-bold text-sm truncate">{lvl.title}</p>
+                          <p className="text-xs text-orange-400">{lvl.points} pts</p>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs font-bold pt-2 border-t border-orange-500/20">
+                          <span>Include</span>
+                          <span>{isChecked ? '☑' : '☐'}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* WHEEL SPIN CONTAINER */}
+              <div className="max-w-md mx-auto p-8 bg-black/40 border border-orange-500/40 space-y-6 shadow-2xl rounded-none text-center">
                 <div className="relative w-64 h-64 mx-auto flex items-center justify-center">
                   <div
                     className="w-full h-full rounded-full border-8 border-orange-500 bg-gradient-to-tr from-orange-600 via-amber-500 to-orange-400 flex items-center justify-center shadow-2xl transition-all duration-[2000ms] ease-out"
                     style={{ transform: `rotate(${wheelRotation}deg)` }}
                   >
-                    <span className="fancy-display text-2xl text-white drop-shadow-lg">GLL WHEEL</span>
+                    <span className="fancy-display text-2xl text-white drop-shadow-lg">SPIN</span>
                   </div>
                   <div className="absolute -top-4 w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[24px] border-t-orange-500 filter drop-shadow" />
                 </div>
@@ -1946,7 +2021,7 @@ export default function Home() {
                 )}
 
                 <button
-                  disabled={wheelSpinning || approvedLevels.length === 0}
+                  disabled={wheelSpinning || selectedWheelLevelIds.length === 0}
                   onClick={handleSpinDemonWheel}
                   className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white py-4 rounded-none text-xl font-bold shadow-2xl transition"
                 >
@@ -2125,9 +2200,12 @@ export default function Home() {
           {activeTab === 'minigames' && (
             <div className="space-y-6 animate-panel">
               <div className={`p-10 border space-y-6 rounded-none ${cardClass}`}>
-                <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/20 pb-4">Goofy Roulette</h2>
+                <div className="flex justify-between items-center border-b border-orange-500/20 pb-4">
+                  <h2 className="fancy-display text-4xl text-orange-500">Goofy Roulette</h2>
+                  <button onClick={() => setActiveTab('games')} className="text-orange-500 hover:underline text-base">← Back to Games</button>
+                </div>
                 {rouletteLevel ? (
-                  <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex flex-col md:flex-row items-center gap-8 pt-4">
                     {getYouTubeThumbnail(rouletteLevel.verification_url) && (
                       <img src={getYouTubeThumbnail(rouletteLevel.verification_url)} alt="" className="w-72 h-40 object-cover border rounded-none" />
                     )}
@@ -2196,85 +2274,118 @@ export default function Home() {
             </div>
           )}
 
-          {/* EXPANDED MOD PANEL WITH MANAGED VICTOR RECORDS */}
+          {/* EXPANDED MOD PANEL WITH COLLAPSIBLE ARROWS */}
           {activeTab === 'mod' && isMod && (
             <div className={`p-10 border space-y-8 rounded-none animate-panel ${cardClass}`}>
               <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/25 pb-4">Expanded Moderator Panel</h2>
 
-              {/* APPROVED RECORDS / VICTORS MANAGEMENT */}
+              {/* APPROVED RECORDS / VICTORS MANAGEMENT WITH ACCORDION TOGGLE */}
               <div className="space-y-4">
-                <h3 className="goofy-title text-2xl text-orange-500">Approved Victors & Records ({approvedSubs.length})</h3>
-                {approvedSubs.length === 0 ? (
-                  <p className="text-base text-gray-400">No approved victor records yet.</p>
-                ) : (
-                  approvedSubs.map((sub) => (
-                    <div key={sub.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
-                      <div>
-                        <span className="font-bold">{sub.player_name}</span> - {sub.progress}% on <span className="text-orange-400">{sub.level_title || `Level #${sub.level_id}`}</span>
-                        {sub.video_url && (
-                          <a href={sub.video_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
-                            Watch Video Proof ↗
-                          </a>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteVictor(sub.id, sub.player_name)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-none text-sm font-bold transition shrink-0"
-                      >
-                        Delete Victor
-                      </button>
-                    </div>
-                  ))
+                <button
+                  onClick={() => setModOpenApproved((prev) => !prev)}
+                  className="w-full flex items-center justify-between goofy-title text-2xl text-orange-500 border-b border-orange-500/20 pb-3 text-left"
+                >
+                  <span>Approved Victors & Records ({approvedSubs.length})</span>
+                  <span className="text-xl">{modOpenApproved ? '▲' : '▼'}</span>
+                </button>
+
+                {modOpenApproved && (
+                  <div className="space-y-3 pt-2">
+                    {approvedSubs.length === 0 ? (
+                      <p className="text-base text-gray-400">No approved victor records yet.</p>
+                    ) : (
+                      approvedSubs.map((sub) => (
+                        <div key={sub.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                          <div>
+                            <span className="font-bold">{sub.player_name}</span> - {sub.progress}% on <span className="text-orange-400">{sub.level_title || `Level #${sub.level_id}`}</span>
+                            {sub.video_url && (
+                              <a href={sub.video_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
+                                Watch Video Proof ↗
+                              </a>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleDeleteVictor(sub.id, sub.player_name)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-none text-sm font-bold transition shrink-0"
+                          >
+                            Delete Victor
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* PENDING LEVEL APPROVALS */}
+              {/* PENDING LEVEL APPROVALS WITH ACCORDION TOGGLE */}
               <div className="space-y-4 border-t border-orange-500/25 pt-6">
-                <h3 className="goofy-title text-2xl text-orange-500">Pending Levels ({pendingLevels.length})</h3>
-                {pendingLevels.length === 0 ? (
-                  <p className="text-base text-gray-400">No pending level submissions.</p>
-                ) : (
-                  pendingLevels.map((lvl) => (
-                    <div key={lvl.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
-                      <div>
-                        <span>{lvl.title} by {lvl.creator}</span>
-                        {lvl.verification_url && (
-                          <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
-                            Watch Video Proof ↗
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex gap-3">
-                        <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm font-bold">Approve</button>
-                        <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-none text-sm font-bold">Reject</button>
-                      </div>
-                    </div>
-                  ))
+                <button
+                  onClick={() => setModOpenPendingLevels((prev) => !prev)}
+                  className="w-full flex items-center justify-between goofy-title text-2xl text-orange-500 border-b border-orange-500/20 pb-3 text-left"
+                >
+                  <span>Pending Levels ({pendingLevels.length})</span>
+                  <span className="text-xl">{modOpenPendingLevels ? '▲' : '▼'}</span>
+                </button>
+
+                {modOpenPendingLevels && (
+                  <div className="space-y-3 pt-2">
+                    {pendingLevels.length === 0 ? (
+                      <p className="text-base text-gray-400">No pending level submissions.</p>
+                    ) : (
+                      pendingLevels.map((lvl) => (
+                        <div key={lvl.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                          <div>
+                            <span>{lvl.title} by {lvl.creator}</span>
+                            {lvl.verification_url && (
+                              <a href={lvl.verification_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
+                                Watch Video Proof ↗
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex gap-3">
+                            <button onClick={() => handleReviewLevel(lvl.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm font-bold">Approve</button>
+                            <button onClick={() => handleReviewLevel(lvl.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-none text-sm font-bold">Reject</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* PENDING RECORD SUBMISSIONS */}
+              {/* PENDING RECORD SUBMISSIONS WITH ACCORDION TOGGLE */}
               <div className="space-y-4 border-t border-orange-500/25 pt-6">
-                <h3 className="goofy-title text-2xl text-orange-500">Pending Record Submissions ({pendingSubs.length})</h3>
-                {pendingSubs.length === 0 ? (
-                  <p className="text-base text-gray-400">No pending record submissions.</p>
-                ) : (
-                  pendingSubs.map((sub) => (
-                    <div key={sub.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
-                      <div>
-                        <span>{sub.player_name} - {sub.progress}% on {sub.level_title}</span>
-                        {sub.video_url && (
-                          <a href={sub.video_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
-                            Watch Video Proof ↗
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex gap-3">
-                        <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm font-bold">Approve</button>
-                        <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-none text-sm font-bold">Reject</button>
-                      </div>
-                    </div>
-                  ))
+                <button
+                  onClick={() => setModOpenPendingRecords((prev) => !prev)}
+                  className="w-full flex items-center justify-between goofy-title text-2xl text-orange-500 border-b border-orange-500/20 pb-3 text-left"
+                >
+                  <span>Pending Record Submissions ({pendingSubs.length})</span>
+                  <span className="text-xl">{modOpenPendingRecords ? '▲' : '▼'}</span>
+                </button>
+
+                {modOpenPendingRecords && (
+                  <div className="space-y-3 pt-2">
+                    {pendingSubs.length === 0 ? (
+                      <p className="text-base text-gray-400">No pending record submissions.</p>
+                    ) : (
+                      pendingSubs.map((sub) => (
+                        <div key={sub.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                          <div>
+                            <span>{sub.player_name} - {sub.progress}% on {sub.level_title}</span>
+                            {sub.video_url && (
+                              <a href={sub.video_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
+                                Watch Video Proof ↗
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex gap-3">
+                            <button onClick={() => handleReviewSubmission(sub.id, 'approved')} className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm font-bold">Approve</button>
+                            <button onClick={() => handleReviewSubmission(sub.id, 'rejected')} className="bg-red-600 text-white px-5 py-2 rounded-none text-sm font-bold">Reject</button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
 
