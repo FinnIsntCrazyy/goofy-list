@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const ALLOWED_MODS = ['finniscrazyy', 'mrconey', 'paulhsu123', 'dhavvin_09', 'lopikpl']
@@ -136,6 +136,7 @@ interface Profile {
   id: string
   username: string
   display_name: string
+  clan?: string
   country: string
   email: string
   youtube: string
@@ -164,6 +165,7 @@ interface PlayerLeaderboardRow extends Profile {
   totalPoints: number
   completedCount: number
   hardestLevel: GoofyLevel | null
+  formattedName: string
   entries: {
     level: GoofyLevel
     progress: number
@@ -198,7 +200,7 @@ export default function Home() {
 
   const [currentUser, setCurrentUser] = useState<Profile | null>(null)
   const [activeTab, setActiveTab] = useState<
-    'welcome' | 'list' | 'level_detail' | 'leaderboard' | 'gacha' | 'minigames' | 'forum' | 'profile' | 'mod' | 'login' | 'register'
+    'welcome' | 'list' | 'level_detail' | 'leaderboard' | 'gacha' | 'wheel' | 'minigames' | 'forum' | 'profile' | 'mod' | 'login' | 'register'
   >('welcome')
   const [selectedListMode, setSelectedListMode] = useState<ListCategory>('classic')
   const [listsDropdownOpen, setListsDropdownOpen] = useState(false)
@@ -212,6 +214,7 @@ export default function Home() {
 
   const [regUsername, setRegUsername] = useState('')
   const [regDisplay, setRegDisplay] = useState('')
+  const [regClan, setRegClan] = useState('')
   const [regCountry, setRegCountry] = useState('pl')
   const [regEmail, setRegEmail] = useState('')
   const [regPass, setRegPass] = useState('')
@@ -242,6 +245,7 @@ export default function Home() {
   const [lvlMinPct, setLvlMinPct] = useState('75')
 
   const [editDisplayName, setEditDisplayName] = useState('')
+  const [editClan, setEditClan] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [editPassword, setEditPassword] = useState('')
   const [editCountry, setEditCountry] = useState('pl')
@@ -267,8 +271,12 @@ export default function Home() {
 
   const [selectedCountryFilter, setSelectedCountryFilter] = useState<string>('ALL')
   const [lbSearch, setLbSearch] = useState('')
-  const [lbPage, setLbPage] = useState(0)
   const [selectedStatsPlayerId, setSelectedStatsPlayerId] = useState<string>('')
+
+  // Demon Wheel state
+  const [wheelSpinning, setWheelSpinning] = useState(false)
+  const [wheelSelectedLevel, setWheelSelectedLevel] = useState<GoofyLevel | null>(null)
+  const [wheelRotation, setWheelRotation] = useState(0)
 
   const [rouletteLevel, setRouletteLevel] = useState<GoofyLevel | null>(null)
   const [rouletteTargetPct, setRouletteTargetPct] = useState<number>(1)
@@ -323,6 +331,7 @@ export default function Home() {
 
   function syncProfileEditor(prof: Profile) {
     setEditDisplayName(prof.display_name || prof.username || '')
+    setEditClan(prof.clan || '')
     setEditEmail(prof.email || '')
     setEditCountry(prof.country || 'pl')
     setEditYoutube(prof.youtube || '')
@@ -395,6 +404,7 @@ export default function Home() {
           id: data.user.id,
           username: cleanUser,
           display_name: regDisplay.trim() || regUsername.trim(),
+          clan: regClan.trim(),
           country: regCountry,
           email: regEmail.trim(),
           bio: '',
@@ -479,7 +489,7 @@ export default function Home() {
         level_title: chosen.title,
         mode: recMode,
         player_username: currentUser.username,
-        player_name: currentUser.display_name,
+        player_name: formatPlayerName(currentUser),
         progress: recProgress,
         video_url: recVideo.trim(),
         enjoyment: recEnjoyment,
@@ -514,7 +524,7 @@ export default function Home() {
       {
         title: lvlTitle.trim(),
         creator: lvlCreator.trim(),
-        verifier: lvlVerifier.trim() || currentUser.display_name,
+        verifier: lvlVerifier.trim() || formatPlayerName(currentUser),
         gd_level_id: lvlGdId.trim(),
         verification_url: lvlVerifyVideo.trim(),
         thumbnail: autoThumb,
@@ -564,7 +574,7 @@ export default function Home() {
     const { error } = await supabase.from('forum_posts').insert([
       {
         author_username: currentUser.username,
-        author_display: currentUser.display_name,
+        author_display: formatPlayerName(currentUser),
         category: postCategory,
         title: postTitle.trim(),
         content: postContent.trim(),
@@ -593,6 +603,19 @@ export default function Home() {
     } else {
       refreshAll()
       showNotice(`Deleted "${title}".`)
+    }
+  }
+
+  async function handleDeleteVictor(subId: number, playerName: string) {
+    if (!isMod) return
+    if (!confirm(`Are you sure you want to delete the record/victor for ${playerName}?`)) return
+
+    const { error } = await supabase.from('submissions').delete().eq('id', subId)
+    if (error) {
+      alert('Error deleting victor submission: ' + error.message)
+    } else {
+      refreshAll()
+      showNotice(`Successfully deleted record for ${playerName}.`)
     }
   }
 
@@ -670,6 +693,7 @@ export default function Home() {
       .from('profiles')
       .update({
         display_name: trimmedDisplay,
+        clan: editClan.trim(),
         email: editEmail.trim(),
         country: editCountry,
         youtube: editYoutube.trim(),
@@ -686,6 +710,7 @@ export default function Home() {
       const updated = {
         ...currentUser,
         display_name: trimmedDisplay,
+        clan: editClan.trim(),
         email: editEmail.trim(),
         country: editCountry,
         youtube: editYoutube.trim(),
@@ -734,6 +759,22 @@ export default function Home() {
       setCurrentUser({ ...currentUser, last_gacha_roll: nowIso, inventory: nextInv })
       refreshAll()
     }, 1500)
+  }
+
+  function handleSpinDemonWheel() {
+    if (approvedLevels.length === 0) {
+      alert('No approved levels available on the wheel.')
+      return
+    }
+    setWheelSpinning(true)
+    setWheelSelectedLevel(null)
+    setWheelRotation((prev) => prev + 1800 + Math.floor(Math.random() * 360))
+
+    setTimeout(() => {
+      const randomLvl = approvedLevels[Math.floor(Math.random() * approvedLevels.length)]
+      setWheelSelectedLevel(randomLvl)
+      setWheelSpinning(false)
+    }, 2000)
   }
 
   async function handleIssueWarning(e: React.FormEvent) {
@@ -833,6 +874,12 @@ export default function Home() {
   const approvedSubs = submissions.filter((s) => s.status === 'approved')
   const pendingSubs = submissions.filter((s) => s.status === 'pending')
 
+  function formatPlayerName(prof: { display_name?: string; username?: string; clan?: string }) {
+    const name = prof.display_name || prof.username || 'Player'
+    const clan = (prof.clan || '').trim()
+    return clan ? `[${clan}] ${name}` : name
+  }
+
   function getLeaderboardForMode(mode: ListCategory): PlayerLeaderboardRow[] {
     const modeLevels = approvedLevels.filter((l) => (l.mode || 'classic') === mode)
     return profiles
@@ -847,7 +894,7 @@ export default function Home() {
 
         modeLevels.forEach((lvl) => {
           const verLower = (lvl.verifier || '').trim().toLowerCase()
-          if (verLower && (verLower === uLower || verLower === dLower)) {
+          if (verLower && (verLower === uLower || verLower === dLower || verLower.includes(uLower))) {
             verifiedLevels.push(lvl)
             if (!seenLevelIds.has(lvl.id)) {
               seenLevelIds.add(lvl.id)
@@ -901,6 +948,7 @@ export default function Home() {
           totalPoints,
           completedCount: fullCompletions.length,
           hardestLevel,
+          formattedName: formatPlayerName(prof),
           entries: entries.sort((a, b) => Number(b.level.points || 0) - Number(a.level.points || 0)),
           createdLevels,
           verifiedLevels,
@@ -924,7 +972,8 @@ export default function Home() {
     const matchesSearch =
       !lbSearch.trim() ||
       p.display_name.toLowerCase().includes(lbSearch.toLowerCase()) ||
-      p.username.toLowerCase().includes(lbSearch.toLowerCase())
+      p.username.toLowerCase().includes(lbSearch.toLowerCase()) ||
+      (p.clan && p.clan.toLowerCase().includes(lbSearch.toLowerCase()))
     return matchesCountry && matchesSearch
   })
 
@@ -943,8 +992,6 @@ export default function Home() {
     return '#ea580c'
   }
 
-  const PAGE_SIZE = 15
-  const pagedLeaderboard = filteredLeaderboard.slice(lbPage * PAGE_SIZE, (lbPage + 1) * PAGE_SIZE)
   const activeStatsPlayer =
     filteredLeaderboard.find((p) => p.id === selectedStatsPlayerId) ||
     filteredLeaderboard[0] ||
@@ -967,7 +1014,7 @@ export default function Home() {
   )
 
   function getLevelVictorsAndVerifiers(lvl: GoofyLevel) {
-    const list: { username: string; displayName: string; videoUrl?: string; enjoyment?: number; progress: number; role: string }[] = []
+    const list: { subId?: number; username: string; displayName: string; videoUrl?: string; enjoyment?: number; progress: number; role: string }[] = []
     const seen = new Set<string>()
 
     if (lvl.verifier) {
@@ -976,22 +1023,24 @@ export default function Home() {
       const matchedProf = profiles.find((p) => p.username.toLowerCase() === vKey || p.display_name.toLowerCase() === vKey)
       list.push({
         username: lvl.verifier,
-        displayName: matchedProf?.display_name || lvl.verifier,
+        displayName: matchedProf ? formatPlayerName(matchedProf) : lvl.verifier,
         videoUrl: lvl.verification_url,
         progress: 100,
         role: 'Verifier',
       })
     }
 
-    approvedSubs
-      .filter((s) => s.level_id === lvl.id)
+    submissions
+      .filter((s) => s.level_id === lvl.id && s.status === 'approved')
       .forEach((s) => {
         const key = s.player_username.toLowerCase()
         if (!seen.has(key)) {
           seen.add(key)
+          const matchedProf = profiles.find((p) => p.username.toLowerCase() === key)
           list.push({
+            subId: s.id,
             username: s.player_username,
-            displayName: s.player_name || s.player_username,
+            displayName: matchedProf ? formatPlayerName(matchedProf) : s.player_name || s.player_username,
             videoUrl: s.video_url,
             enjoyment: s.enjoyment,
             progress: s.progress,
@@ -1123,6 +1172,7 @@ export default function Home() {
                       totalPoints: 0,
                       completedCount: 0,
                       hardestLevel: null,
+                      formattedName: formatPlayerName(currentUser),
                       entries: [],
                       createdLevels: [],
                       verifiedLevels: [],
@@ -1133,7 +1183,7 @@ export default function Home() {
                   }}
                   className="text-base bg-orange-500/15 border border-orange-500 text-orange-500 px-4 py-2.5 rounded-none font-bold hover:bg-orange-500 hover:text-white transition"
                 >
-                  {currentUser.display_name}
+                  {formatPlayerName(currentUser)}
                 </button>
                 <button onClick={handleLogout} className="text-base text-gray-400 hover:text-orange-500 transition">
                   Logout
@@ -1207,6 +1257,7 @@ export default function Home() {
             {[
               { id: 'leaderboard', label: `Leaderboard (${listLabels[selectedListMode]})` },
               { id: 'gacha', label: 'Goofy Gacha' },
+              { id: 'wheel', label: 'Demon Wheel' },
               { id: 'minigames', label: 'Roulette' },
               { id: 'forum', label: 'Forum & Bugs' },
             ].map((tab) => (
@@ -1466,7 +1517,7 @@ export default function Home() {
                   Welcome to Goofy Levels List
                 </h1>
                 <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                  Track top completions across Classic, Impossible, and Spam lists. Spin Goofy Gacha, challenge Goofy Roulette, and climb the international leaderboard!
+                  Track top completions across Classic, Impossible, and Spam lists. Spin Goofy Gacha & Demon Wheel, challenge Goofy Roulette, and climb the international leaderboard!
                 </p>
                 <div className="flex flex-wrap justify-center gap-4 pt-4">
                   <button
@@ -1583,9 +1634,9 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* RECORDS */}
+              {/* RECORDS / VICTORS WITH DELETE BUTTON FOR MODS */}
               <div className={`p-8 border space-y-4 text-center rounded-none ${cardClass}`}>
-                <h3 className="goofy-title text-3xl text-orange-500">Records</h3>
+                <h3 className="goofy-title text-3xl text-orange-500">Records & Victors</h3>
                 <p className="text-base text-gray-400 border-b border-orange-500/20 pb-4">
                   {viewingLevel.min_percent || 75}% or better required to qualify
                 </p>
@@ -1599,11 +1650,21 @@ export default function Home() {
                           <span className="font-bold text-lg">{v.displayName}</span>{' '}
                           <span className="text-orange-500">({v.role} - {v.progress}%)</span>
                         </div>
-                        {v.videoUrl && (
-                          <a href={v.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm">
-                            Video Proof ↗
-                          </a>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {v.videoUrl && (
+                            <a href={v.videoUrl} target="_blank" rel="noreferrer" className="bg-orange-500 text-white px-5 py-2 rounded-none text-sm">
+                              Video Proof ↗
+                            </a>
+                          )}
+                          {isMod && v.subId && (
+                            <button
+                              onClick={() => handleDeleteVictor(v.subId!, v.displayName)}
+                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-none text-sm font-bold transition"
+                            >
+                              Delete Victor
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1612,126 +1673,68 @@ export default function Home() {
             </div>
           )}
 
-          {/* WORLD MAP HEATMAP & LEADERBOARD STATS VIEWER */}
+          {/* INFINITE WORLD MAP HEATMAP & LEADERBOARD STATS VIEWER */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6 animate-panel">
               <div className={`border overflow-hidden rounded-none ${cardClass}`}>
                 <div className="relative bg-gradient-to-b from-orange-500/15 via-amber-500/10 to-transparent p-8 text-center space-y-4">
                   
-                  {/* REALISTIC SVG WORLD MAP WITH CLICKABLE INDIVIDUAL COUNTRIES & HEATMAP SHADING */}
+                  {/* COMPLETE WORLD MAP WITH EVERY COUNTRY & HEATMAP SHADING */}
                   <div className="max-w-4xl mx-auto p-4 bg-[#09090b]/90 border border-orange-500/30 rounded-none">
-                    <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click an Individual Country on the Map to Filter</p>
+                    <p className="text-sm uppercase tracking-wider text-orange-400 mb-2">Click Any Country on the Map to Filter</p>
                     <svg viewBox="0 0 1000 500" className="w-full h-72 sm:h-96">
-                      <g stroke={darkMode ? '#333b48' : '#ffffff'} strokeWidth="1">
-                        {/* United States */}
-                        <path
-                          d="M130,120 Q170,90 220,110 T260,160 Q240,210 180,230 T120,190 Z"
-                          fill={getCountryColor('us')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('us'); setLbPage(0); }}
-                        >
-                          <title>United States ({countryPlayerCounts['us'] || 0} players)</title>
-                        </path>
+                      <g stroke={darkMode ? '#333b48' : '#cbd5e1'} strokeWidth="0.75">
+                        {/* North America & Central America */}
+                        <path d="M110,65 Q180,35 260,65 T290,115 Q200,120 110,65 Z" fill={getCountryColor('ca')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ca')}><title>Canada</title></path>
+                        <path d="M130,120 Q170,90 220,110 T260,160 Q240,210 180,230 T120,190 Z" fill={getCountryColor('us')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('us')}><title>United States</title></path>
+                        <path d="M170,230 Q220,225 240,270 T190,290 Z" fill={getCountryColor('mx')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('mx')}><title>Mexico</title></path>
+                        <path d="M210,295 Q240,290 250,310 T215,320 Z" fill={getCountryColor('gt')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('gt')}><title>Guatemala</title></path>
+                        <path d="M230,140 Q250,135 255,160 T230,165 Z" fill={getCountryColor('cu')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('cu')}><title>Cuba</title></path>
 
-                        {/* Canada */}
-                        <path
-                          d="M110,65 Q180,35 260,65 T290,115 Q200,120 110,65 Z"
-                          fill={getCountryColor('ca')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('ca'); setLbPage(0); }}
-                        >
-                          <title>Canada ({countryPlayerCounts['ca'] || 0} players)</title>
-                        </path>
+                        {/* South America */}
+                        <path d="M240,270 Q280,280 300,340 T270,420 Q230,440 215,360 T240,270 Z" fill={getCountryColor('br')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('br')}><title>Brazil</title></path>
+                        <path d="M215,290 Q250,295 240,360 T210,400 Z" fill={getCountryColor('co')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('co')}><title>Colombia</title></path>
+                        <path d="M205,390 Q235,400 230,460 T200,470 Z" fill={getCountryColor('pe')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('pe')}><title>Peru</title></path>
+                        <path d="M210,470 Q235,480 225,540 T195,540 Z" fill={getCountryColor('cl')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('cl')}><title>Chile</title></path>
+                        <path d="M245,420 Q285,430 270,490 T235,480 Z" fill={getCountryColor('ar')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ar')}><title>Argentina</title></path>
 
-                        {/* Brazil */}
-                        <path
-                          d="M240,270 Q280,280 300,340 T270,420 Q230,440 215,360 T240,270 Z"
-                          fill={getCountryColor('br')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('br'); setLbPage(0); }}
-                        >
-                          <title>Brazil ({countryPlayerCounts['br'] || 0} players)</title>
-                        </path>
+                        {/* Europe */}
+                        <path d="M450,95 Q465,90 470,115 T450,125 Z" fill={getCountryColor('gb')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('gb')}><title>United Kingdom</title></path>
+                        <path d="M440,110 Q455,105 460,120 T440,130 Z" fill={getCountryColor('ie')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ie')}><title>Ireland</title></path>
+                        <path d="M475,125 Q495,120 500,145 T475,155 Z" fill={getCountryColor('fr')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('fr')}><title>France</title></path>
+                        <path d="M505,115 Q525,110 530,135 T505,145 Z" fill={getCountryColor('de')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('de')}><title>Germany</title></path>
+                        <path d="M535,110 Q555,105 560,130 T535,140 Z" fill={getCountryColor('pl')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('pl')}><title>Poland</title></path>
+                        <path d="M455,155 Q475,150 480,175 T455,185 Z" fill={getCountryColor('es')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('es')}><title>Spain</title></path>
+                        <path d="M485,160 Q495,155 500,175 T485,180 Z" fill={getCountryColor('pt')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('pt')}><title>Portugal</title></path>
+                        <path d="M515,150 Q530,145 535,175 T515,190 Z" fill={getCountryColor('it')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('it')}><title>Italy</title></path>
+                        <path d="M545,145 Q565,140 575,170 T545,180 Z" fill={getCountryColor('ro')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ro')}><title>Romania</title></path>
+                        <path d="M535,80 Q565,75 580,105 T535,115 Z" fill={getCountryColor('se')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('se')}><title>Sweden</title></path>
+                        <path d="M515,85 Q535,80 540,110 T515,115 Z" fill={getCountryColor('no')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('no')}><title>Norway</title></path>
+                        <path d="M570,70 Q660,60 700,120 T580,140 Z" fill={getCountryColor('ru')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ru')}><title>Russia</title></path>
+                        <path d="M495,125 Q510,120 515,135 T495,140 Z" fill={getCountryColor('ch')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ch')}><title>Switzerland</title></path>
+                        <path d="M480,135 Q500,130 505,145 T480,150 Z" fill={getCountryColor('nl')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('nl')}><title>Netherlands</title></path>
+                        <path d="M565,130 Q585,125 590,150 T565,160 Z" fill={getCountryColor('ua')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ua')}><title>Ukraine</title></path>
 
-                        {/* United Kingdom */}
-                        <path
-                          d="M450,95 Q465,90 470,115 T450,125 Z"
-                          fill={getCountryColor('gb')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('gb'); setLbPage(0); }}
-                        >
-                          <title>United Kingdom ({countryPlayerCounts['gb'] || 0} players)</title>
-                        </path>
+                        {/* Africa */}
+                        <path d="M470,210 Q530,205 550,280 T510,360 Q460,350 450,280 Z" fill={getCountryColor('eg')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('eg')}><title>Egypt</title></path>
+                        <path d="M430,225 Q465,220 470,270 T435,280 Z" fill={getCountryColor('dz')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('dz')}><title>Algeria</title></path>
+                        <path d="M485,340 Q535,350 520,440 T470,430 Z" fill={getCountryColor('za')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('za')}><title>South Africa</title></path>
+                        <path d="M460,290 Q510,295 500,360 T455,350 Z" fill={getCountryColor('ao')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('ao')}><title>Angola</title></path>
 
-                        {/* France */}
-                        <path
-                          d="M475,125 Q495,120 500,145 T475,155 Z"
-                          fill={getCountryColor('fr')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('fr'); setLbPage(0); }}
-                        >
-                          <title>France ({countryPlayerCounts['fr'] || 0} players)</title>
-                        </path>
+                        {/* Asia */}
+                        <path d="M620,130 Q720,110 780,180 T700,260 Q630,250 620,130 Z" fill={getCountryColor('cn')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('cn')}><title>China</title></path>
+                        <path d="M890,140 Q910,135 915,165 T890,175 Z" fill={getCountryColor('jp')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('jp')}><title>Japan</title></path>
+                        <path d="M840,165 Q860,160 865,185 T840,195 Z" fill={getCountryColor('kr')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('kr')}><title>South Korea</title></path>
+                        <path d="M680,210 Q725,200 735,260 T675,270 Z" fill={getCountryColor('in')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('in')}><title>India</title></path>
+                        <path d="M740,240 Q770,235 775,275 T735,285 Z" fill={getCountryColor('th')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('th')}><title>Thailand</title></path>
+                        <path d="M750,285 Q790,280 800,330 T740,340 Z" fill={getCountryColor('id')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('id')}><title>Indonesia</title></path>
+                        <path d="M780,265 Q800,260 805,290 T780,300 Z" fill={getCountryColor('vn')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('vn')}><title>Vietnam</title></path>
+                        <path d="M585,175 Q615,170 625,210 T585,220 Z" fill={getCountryColor('tr')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('tr')}><title>Turkey</title></path>
+                        <path d="M630,225 Q655,220 660,250 T630,260 Z" fill={getCountryColor('sa')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('sa')}><title>Saudi Arabia</title></path>
 
-                        {/* Germany */}
-                        <path
-                          d="M505,115 Q525,110 530,135 T505,145 Z"
-                          fill={getCountryColor('de')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('de'); setLbPage(0); }}
-                        >
-                          <title>Germany ({countryPlayerCounts['de'] || 0} players)</title>
-                        </path>
-
-                        {/* Poland */}
-                        <path
-                          d="M535,110 Q555,105 560,130 T535,140 Z"
-                          fill={getCountryColor('pl')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('pl'); setLbPage(0); }}
-                        >
-                          <title>Poland ({countryPlayerCounts['pl'] || 0} players)</title>
-                        </path>
-
-                        {/* Spain */}
-                        <path
-                          d="M455,155 Q475,150 480,175 T455,185 Z"
-                          fill={getCountryColor('es')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('es'); setLbPage(0); }}
-                        >
-                          <title>Spain ({countryPlayerCounts['es'] || 0} players)</title>
-                        </path>
-
-                        {/* Italy */}
-                        <path
-                          d="M515,150 Q530,145 535,175 T515,190 Z"
-                          fill={getCountryColor('it')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('it'); setLbPage(0); }}
-                        >
-                          <title>Italy ({countryPlayerCounts['it'] || 0} players)</title>
-                        </path>
-
-                        {/* Japan */}
-                        <path
-                          d="M890,140 Q910,135 915,165 T890,175 Z"
-                          fill={getCountryColor('jp')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('jp'); setLbPage(0); }}
-                        >
-                          <title>Japan ({countryPlayerCounts['jp'] || 0} players)</title>
-                        </path>
-
-                        {/* Australia */}
-                        <path
-                          d="M790,320 Q850,315 880,355 T815,435 Q770,405 790,320 Z"
-                          fill={getCountryColor('au')}
-                          className="cursor-pointer hover:opacity-80 transition"
-                          onClick={() => { setSelectedCountryFilter('au'); setLbPage(0); }}
-                        >
-                          <title>Australia ({countryPlayerCounts['au'] || 0} players)</title>
-                        </path>
+                        {/* Oceania */}
+                        <path d="M790,320 Q850,315 880,355 T815,435 Q770,405 790,320 Z" fill={getCountryColor('au')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('au')}><title>Australia</title></path>
+                        <path d="M900,415 Q925,410 930,445 T895,450 Z" fill={getCountryColor('nz')} className="cursor-pointer hover:opacity-80 transition" onClick={() => setSelectedCountryFilter('nz')}><title>New Zealand</title></path>
                       </g>
                     </svg>
                   </div>
@@ -1742,10 +1745,7 @@ export default function Home() {
                   <div className="flex flex-wrap justify-center items-center gap-3">
                     <select
                       value={selectedListMode}
-                      onChange={(e) => {
-                        setSelectedListMode(e.target.value as ListCategory)
-                        setLbPage(0)
-                      }}
+                      onChange={(e) => setSelectedListMode(e.target.value as ListCategory)}
                       className={`border-2 border-orange-500 rounded-none bg-orange-500/15 text-xl font-bold px-4 py-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}
                     >
                       <option value="classic" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>Classic List Leaderboard</option>
@@ -1755,10 +1755,7 @@ export default function Home() {
 
                     <select
                       value={selectedCountryFilter}
-                      onChange={(e) => {
-                        setSelectedCountryFilter(e.target.value)
-                        setLbPage(0)
-                      }}
+                      onChange={(e) => setSelectedCountryFilter(e.target.value)}
                       className={`border-2 border-orange-500 rounded-none bg-orange-500/15 text-xl font-bold px-4 py-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}
                     >
                       <option value="ALL" className={darkMode ? 'bg-[#121216]' : 'bg-white'}>Global (All Countries)</option>
@@ -1770,46 +1767,43 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 border-t border-orange-500/25">
+                  {/* INFINITE SCROLLING PLAYER LIST */}
                   <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-orange-500/25 p-6 flex flex-col justify-between space-y-6">
                     <div className="space-y-4">
                       <input
                         type="text"
-                        placeholder="Search player..."
+                        placeholder="Search player or clan..."
                         value={lbSearch}
-                        onChange={(e) => {
-                          setLbSearch(e.target.value)
-                          setLbPage(0)
-                        }}
+                        onChange={(e) => setLbSearch(e.target.value)}
                         className={inputClass}
                       />
-                      <div className="border border-orange-500/30 rounded-none h-96 overflow-y-auto divide-y divide-orange-500/15">
-                        {pagedLeaderboard.map((player) => {
-                          const globalRank = activeLeaderboard.findIndex((p) => p.id === player.id) + 1
-                          const isSelected = activeStatsPlayer?.id === player.id
-                          const rankDisplay = player.totalPoints > 0 ? `#${globalRank}` : '-'
-                          return (
-                            <button
-                              key={player.id}
-                              onClick={() => setSelectedStatsPlayerId(player.id)}
-                              className={`w-full text-left px-5 py-4 flex items-center justify-between text-base transition ${
-                                isSelected ? 'bg-orange-500 text-white font-bold' : 'hover:bg-orange-500/15'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3.5 truncate">
-                                <span className="font-mono w-10 text-lg">{rankDisplay}</span>
-                                <img src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`} alt="" className="w-6 h-4 border" />
-                                <span className="truncate text-lg">{player.display_name}</span>
-                              </div>
-                              <span className="text-base opacity-90">{player.totalPoints.toFixed(2)} pts</span>
-                            </button>
-                          )
-                        })}
+                      <div className="border border-orange-500/30 rounded-none h-[500px] overflow-y-auto divide-y divide-orange-500/15">
+                        {filteredLeaderboard.length === 0 ? (
+                          <p className="p-6 text-center text-gray-400">No players found matching your search.</p>
+                        ) : (
+                          filteredLeaderboard.map((player) => {
+                            const globalRank = activeLeaderboard.findIndex((p) => p.id === player.id) + 1
+                            const isSelected = activeStatsPlayer?.id === player.id
+                            const rankDisplay = player.totalPoints > 0 ? `#${globalRank}` : '-'
+                            return (
+                              <button
+                                key={player.id}
+                                onClick={() => setSelectedStatsPlayerId(player.id)}
+                                className={`w-full text-left px-5 py-4 flex items-center justify-between text-base transition ${
+                                  isSelected ? 'bg-orange-500 text-white font-bold' : 'hover:bg-orange-500/15'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3.5 truncate">
+                                  <span className="font-mono w-10 text-lg">{rankDisplay}</span>
+                                  <img src={`https://flagcdn.com/w20/${player.country.toLowerCase()}.png`} alt="" className="w-6 h-4 border" />
+                                  <span className="truncate text-lg">{player.formattedName}</span>
+                                </div>
+                                <span className="text-base opacity-90">{player.totalPoints.toFixed(2)} pts</span>
+                              </button>
+                            )
+                          })
+                        )}
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-around pt-2 text-base font-bold uppercase">
-                      <button disabled={lbPage === 0} onClick={() => setLbPage((p) => Math.max(0, p - 1))} className="disabled:opacity-35">Previous</button>
-                      <button disabled={(lbPage + 1) * PAGE_SIZE >= filteredLeaderboard.length} onClick={() => setLbPage((p) => p + 1)} className="disabled:opacity-35">Next</button>
                     </div>
                   </div>
 
@@ -1824,7 +1818,7 @@ export default function Home() {
                             }}
                             className="fancy-display text-4xl text-orange-500 hover:underline"
                           >
-                            {activeStatsPlayer.display_name}
+                            {activeStatsPlayer.formattedName}
                           </button>
                         </div>
                         <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
@@ -1909,7 +1903,60 @@ export default function Home() {
             </div>
           )}
 
-          {/* PROFILE PAGE WITH CORRECTED AVATAR & FLAG FRAME */}
+          {/* DEMON WHEEL TAB (WHEEL OF FATE WITH LIST LEVELS & THUMBNAILS) */}
+          {activeTab === 'wheel' && (
+            <div className={`p-10 border text-center space-y-8 rounded-none animate-panel ${cardClass}`}>
+              <div className="space-y-3">
+                <span className="bg-orange-500/20 text-orange-500 px-5 py-2 rounded-none text-base">Demon Wheel of Fate</span>
+                <h2 className="fancy-display text-4xl text-orange-500">Spin the Wheel of List Levels!</h2>
+                <p className="text-lg text-gray-400 max-w-xl mx-auto">
+                  Test your fate! Spin the wheel to randomly select a list level for your next challenge session.
+                </p>
+              </div>
+
+              <div className="max-w-lg mx-auto p-8 bg-black/40 border border-orange-500/40 space-y-6 shadow-2xl rounded-none">
+                <div className="relative w-64 h-64 mx-auto flex items-center justify-center">
+                  <div
+                    className="w-full h-full rounded-full border-8 border-orange-500 bg-gradient-to-tr from-orange-600 via-amber-500 to-orange-400 flex items-center justify-center shadow-2xl transition-all duration-[2000ms] ease-out"
+                    style={{ transform: `rotate(${wheelRotation}deg)` }}
+                  >
+                    <span className="fancy-display text-2xl text-white drop-shadow-lg">GLL WHEEL</span>
+                  </div>
+                  <div className="absolute -top-4 w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[24px] border-t-orange-500 filter drop-shadow" />
+                </div>
+
+                {wheelSelectedLevel && !wheelSpinning && (
+                  <div className="space-y-4 animate-panel bg-orange-500/15 p-6 border border-orange-500/30 rounded-none">
+                    <p className="text-sm uppercase text-orange-400 font-bold">Selected Level Result:</p>
+                    <h3 className="goofy-title text-3xl text-white">{wheelSelectedLevel.title}</h3>
+                    <p className="text-base text-orange-300">By {wheelSelectedLevel.creator} • {wheelSelectedLevel.points} pts</p>
+                    {getYouTubeThumbnail(wheelSelectedLevel.verification_url) && (
+                      <img src={getYouTubeThumbnail(wheelSelectedLevel.verification_url)} alt="" className="w-full h-40 object-cover border border-orange-500/40 rounded-none" />
+                    )}
+                    <button
+                      onClick={() => {
+                        setViewingLevel(wheelSelectedLevel)
+                        setActiveTab('level_detail')
+                      }}
+                      className="bg-orange-500 hover:bg-orange-600 text-white w-full py-3 rounded-none font-bold transition"
+                    >
+                      View Level Details ↗
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  disabled={wheelSpinning || approvedLevels.length === 0}
+                  onClick={handleSpinDemonWheel}
+                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white py-4 rounded-none text-xl font-bold shadow-2xl transition"
+                >
+                  {wheelSpinning ? 'Spinning Wheel...' : 'Spin Demon Wheel 🎡'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PROFILE PAGE WITH CLAN SUPPORT */}
           {activeTab === 'profile' && viewingPlayer && (
             <div className={`max-w-4xl mx-auto border overflow-hidden space-y-8 rounded-none animate-panel ${cardClass}`}>
               <div className="relative h-64 sm:h-72 w-full bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 overflow-hidden">
@@ -1943,7 +1990,7 @@ export default function Home() {
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
-                        <h2 className="fancy-display text-3xl sm:text-4xl text-white drop-shadow">{viewingPlayer.display_name}</h2>
+                        <h2 className="fancy-display text-3xl sm:text-4xl text-white drop-shadow">{viewingPlayer.formattedName}</h2>
                         <span className="bg-orange-500 text-white text-sm px-3.5 py-1 uppercase font-bold rounded-none">
                           {viewingPlayer.title_badge || 'Member'}
                         </span>
@@ -2039,16 +2086,16 @@ export default function Home() {
                         <input type="text" value={editDisplayName} onChange={(e) => setEditDisplayName(e.target.value)} className={inputClass} />
                       </div>
                       <div>
+                        <label className="block text-base mb-2">Clan (e.g. GLL)</label>
+                        <input type="text" value={editClan} onChange={(e) => setEditClan(e.target.value)} className={inputClass} placeholder="Optional clan tag" />
+                      </div>
+                      <div>
                         <label className="block text-base mb-2">Country / Territory</label>
                         <select value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className={inputClass}>
                           {COUNTRIES.map((c) => (
                             <option key={c.code} value={c.code}>{c.name}</option>
                           ))}
                         </select>
-                      </div>
-                      <div>
-                        <label className="block text-base mb-2">Title Badge</label>
-                        <input type="text" value={editBadge} onChange={(e) => setEditBadge(e.target.value)} className={inputClass} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -2149,13 +2196,40 @@ export default function Home() {
             </div>
           )}
 
-          {/* EXPANDED MOD PANEL */}
+          {/* EXPANDED MOD PANEL WITH MANAGED VICTOR RECORDS */}
           {activeTab === 'mod' && isMod && (
             <div className={`p-10 border space-y-8 rounded-none animate-panel ${cardClass}`}>
               <h2 className="fancy-display text-4xl text-orange-500 border-b border-orange-500/25 pb-4">Expanded Moderator Panel</h2>
 
-              {/* PENDING LEVEL APPROVALS */}
+              {/* APPROVED RECORDS / VICTORS MANAGEMENT */}
               <div className="space-y-4">
+                <h3 className="goofy-title text-2xl text-orange-500">Approved Victors & Records ({approvedSubs.length})</h3>
+                {approvedSubs.length === 0 ? (
+                  <p className="text-base text-gray-400">No approved victor records yet.</p>
+                ) : (
+                  approvedSubs.map((sub) => (
+                    <div key={sub.id} className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-none flex flex-col sm:flex-row justify-between text-base items-start sm:items-center gap-3">
+                      <div>
+                        <span className="font-bold">{sub.player_name}</span> - {sub.progress}% on <span className="text-orange-400">{sub.level_title || `Level #${sub.level_id}`}</span>
+                        {sub.video_url && (
+                          <a href={sub.video_url} target="_blank" rel="noreferrer" className="block text-sm text-orange-400 underline mt-1">
+                            Watch Video Proof ↗
+                          </a>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVictor(sub.id, sub.player_name)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-none text-sm font-bold transition shrink-0"
+                      >
+                        Delete Victor
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* PENDING LEVEL APPROVALS */}
+              <div className="space-y-4 border-t border-orange-500/25 pt-6">
                 <h3 className="goofy-title text-2xl text-orange-500">Pending Levels ({pendingLevels.length})</h3>
                 {pendingLevels.length === 0 ? (
                   <p className="text-base text-gray-400">No pending level submissions.</p>
@@ -2424,6 +2498,10 @@ export default function Home() {
                 <div>
                   <label className="block text-base mb-1">Display Name</label>
                   <input type="text" value={regDisplay} onChange={(e) => setRegDisplay(e.target.value)} className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-base mb-1">Clan Tag (e.g. GLL)</label>
+                  <input type="text" value={regClan} onChange={(e) => setRegClan(e.target.value)} className={inputClass} placeholder="Optional clan tag" />
                 </div>
                 <div>
                   <label className="block text-base mb-1">Email</label>
